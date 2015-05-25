@@ -1,0 +1,91 @@
+The Internet is composed of thousands of autonomous,
+competing networks that exchange reachability information using an
+interdomain routing protocol.  Network operators must continually
+reconfigure the routing protocols to realize various economic and
+performance goals.  Unfortunately, there is no systematic way to predict
+how the configuration will affect the behavior of the routing protocol
+or to determine whether the routing protocol will operate correctly at
+all.
+This dissertation develops techniques to reason about
+the dynamic behavior of Internet routing, based on {\em static}
+analysis of the router configurations, before the protocol ever runs on
+a live network.  
+
+Interdomain routing offers each independent network tremendous
+flexibility in configuring the routing protocols to accomplish various
+economic and performance tasks.  Routing configurations are
+complex, and writing them is similar to writing a distributed program;
+the (unavoidable) consequence of configuration complexity is the
+potential for incorrect and unpredictable behavior.  These mistakes and
+unintended interactions lead to routing faults, which disrupt end-to-end
+connectivity.  Network operators writing configurations make mistakes;
+they may also specify policies that interact in unexpected ways with
+policies in other networks.  To avoid disrupting network connectivity
+and degrading performance, operators would benefit from being able to
+determine the effects of 
+configuration 
+changes {\em before deploying them on a live network}; unfortunately,
+the status quo provides them no opportunity to do so.  This dissertation
+develops the techniques to achieve this goal of proactively ensuring
+correct and predictable Internet routing.
+
+The first challenge in guaranteeing correct and predictable behavior
+from a routing protocol is defining a specification for correct behavior.
+We identify three important aspects of correctness---path visibility,
+route validity, and safety---and develop {\em proactive} techniques for
+guaranteeing that these properties hold.  Path visibility states that
+the protocol disseminates information about paths in the topology; route
+validity says that this information actually corresponds to those paths;
+safety says that the protocol ultimately converges to a stable outcome,
+implying that routing updates actually correspond to topological changes.
+
+Armed with this correctness specification, we tackle the second
+challenge: analyzing routing protocol configurations that may
+be distributed across hundreds of routers.  We develop
+techniques to check whether a
+routing protocol satisfies the correctness specification 
+{\em within a single independently operated network}.  
+We find that much of the specification can be checked with static
+configuration analysis alone.  We present examples of real-world routing
+faults and propose a systematic framework to classify, detect, correct,
+and prevent them.  We describe the design and implementation of
+\rcc (``router configuration checker''), a tool that uses static
+configuration analysis to enable network operators to debug
+configurations before deploying them in an operational network.  We have
+used \rcc to detect faults in 17 different networks, including several
+nationwide Internet service providers (ISPs).  To date, \rcc has been
+downloaded by over seventy network operators.  
+
+A critical aspect of guaranteeing correct and predictable Internet
+routing is ensuring that the interactions of the configurations {\em
+across multiple networks} do not violate the correctness specification.
+Guaranteeing safety is challenging because each network sets its policies
+independently, and these policies may conflict.  Using a formal model of
+today's Internet routing protocol, we derive conditions to guarantee
+that unintended policy interactions will never cause the routing
+protocol to oscillate.
+
+This dissertation also takes steps to make Internet routing more
+predictable. We present algorithms that help network operators predict
+how a set of distributed router configurations within a single network
+will affect the flow of traffic through that network.  We describe a tool
+based on these algorithms that exploits the unique
+characteristics of routing data to reduce computational overhead.  Using
+data from a large ISP, we show that this tool correctly computes BGP
+routing decisions and has a running time that is acceptable for many
+tasks, such as traffic engineering and capacity planning.
+
+
+
+%% Because the behavior of the Internet routing system also depends on the
+%% behavior of other networks, it must also exploit reactive techniques; we
+%% briefly discuss how certain reactive techniques can complement the
+%% proactive techniques we present in this dissertation.  Furthermore, many
+%% of the problems with correctness and predictability of the current
+%% Internet routing infrastructure stem from the fact that today's
+%% architecture was not designed with these goals in mind.  Carefully
+%% considered changes to the Internet's routing protocol and architecture
+%% could make it more intrinsically robust against incorrect and
+%% unpredictable behavior.  We discuss several fundamental limitations of
+%% today's interdomain routing architecture and propose new architectural
+%% directions.

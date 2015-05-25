@@ -1,0 +1,40 @@
+\centering
+\begin{pspicture}(8,2.5)
+%    \showgrid
+    \psset{nodesep=2pt, arrows=<->}
+
+
+    \cnodeput(0.75,2){A}{$A$}
+    \cnodeput(2.75,2){B}{$B$}
+    \cnodeput(0.75,0.5){X}{$X$}
+    \cnodeput(2.75,0.5){Y}{$Y$}
+
+    \psset{nodesep=2pt, arrows=<->}
+    \ncline{X}{Y}
+    \ncline{A}{B}
+
+    \rput(0.75,1.2){\rnode{r1}{}}
+    \rput(2.75,1.2){\rnode{r2}{}}
+    \rput(6.1,2.1){\rnode{o}{\parbox{1.7in}{\small If AS 1 and AS 2 are
+    peers, the AS path length and MED
+    on both of these sessions should normally be identical.}}}
+
+    \psset{nodesep=1pt, linewidth=0.5pt, arrows=->}
+    \ncarc{o}{r2}
+    \ncarc{o}{r1}
+
+    \psset{nodesep=1pt, linestyle=dotted, linewidth=1pt, arrows=<-}
+
+    \ncline{X}{A}
+    \ncline{Y}{B}
+
+    \rput(0,0.5){\rnode{r1_}{\parbox{0.5in}{AS $1$}}}
+    \rput(0,2){\rnode{r2_}{\parbox{0.5in}{AS $2$}}}
+
+
+
+    \psframe[fillcolor=white,linestyle=dashed,framearc=0.3](0.15,0)(3.5, 1)
+    \psframe[fillcolor=white,linestyle=dashed, framearc=0.3](0.15,1.5)(3.5, 2.5)
+
+
+\end{pspicture}

@@ -1,0 +1,77 @@
+%% \cs{T}he complexity of Internet routing configuration and protocol
+%% dynamics mandates a framework for understanding and manipulating
+%% Internet routing at a level of abstraction that facilitates reasoning
+%% about whether or not the protocol is behaving ``correctly''.  Naturally,
+%% the first step in this process is defining what it means for a routing
+%% protocol to operate correctly in the first place.  Specifying
+%% correctness is not easy, because it requires distilling a high-level
+%% description of how the routing protocol should behave from the myriad
+%% technical minutia of the operation of the protocol.
+
+\cs{A}lthough the flexbility offered by Internet routing configuration
+allows the protocol to scale and enables operators to express a wide
+variety of policies, this flexibility also introduces complexity.  This
+complexity makes is difficult to reason about the behavior of the
+routing protocol, which typically leads to {\em ad hoc} fixes that
+ultimately exacerbate this complexity.  Today, network operators (who
+are continually tweaking routing configuration) and protocol designers
+(who are continually proposing point solutions to various problems) have
+no way of reasoning about whether or not the routing protocol will
+operate as intended.  Worse yet, operators and designers do not even
+have a specification of properties that the routing protocol should
+satisfy.  This chapter remedies this situation by specifying properties
+that any routing protocol should satisfy to be considered ``correct''.
+
+In this chapter, we introduce three properties that can be used to
+classify the behavior of any routing protocol.  We briefly describe
+these properties below and explain why these properties are critical for
+the correct operation of the routing protocol.
+
+\begin{enumerate}
+\itemsep=-1pt
+\item {\em Route validity} states that the information propagated by a
+routing protocol should reflect the underlying topology.  If route
+validity is violated, then end users could experience a failure of
+end-to-end connectivity; for example, routers may ``blackhole'' traffic,
+or the traffic may get caught in a loop and may never reach the
+destination.
+\item {\em Path visibility} states that if there is a usable path
+between two nodes, then the routing protocol will propagate information
+about that path.  A failure of path visibility could disrupt
+end-to-end communication by preventing two connected nodes from learning
+routes between one another.
+\item {\em Safety} states that the routing protocol converges to a
+stable route assignment, regardless of the order in which routing
+messages are exchanged.  A routing protocol that violates safety will
+induce persistent route oscillations, thus causing routing changes that
+are unrelated to topological changes.
+\end{enumerate}
+\noindent
+This chapter explores these properties and demonstrate how they can
+deepen our understanding of Internet routing behavior.  The next two
+chapters of this dissertation explore how tools can both detect when
+these properties are violated (Chapter~\ref{chap:rcc}) and exploit these
+properties to simplify analysis of the protocol's dynamics
+(Chapter~\ref{chap:sandbox}).  Chapter~\ref{chap:policy} deals with the
+challenges of guaranteeing safety, an inherently global property, and
+Chapter~\ref{chap:beyond} proposes how both dynamic analysis and
+routing protocol improvements can help guarantee these properties.
+
+%Previous work in wide-area protocol design
+%has focused on specific modifications to BGP that fix a particular
+%problem but often spur unintended negative side effects.  Furthermore,
+%designers of new wide-area routing protocols require a mechanism that
+%enables them to reason about the circumstances under which the protocol
+%will behave ``correctly''.  To help reason about modifications to
+%existing routing protocols and to aid in the sound design of new ones in
+%the future, we propose that routing protocols be classified in terms of
+%specific high-level properties.
+
+After we introduce some basic terminology in
+Section~\ref{sec:definitions}, we motivate and describe the correctness
+properties.  Sections~\ref{sec:validity_def},
+\ref{sec:visibility_def},~and
+\ref{sec:safety_def} 
+describe route validity, path visibility, and safety, respectively, and
+explain how various aspects of the protocol operation and configuration
+can cause each of these to be violated in practice.  

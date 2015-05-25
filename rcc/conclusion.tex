@@ -1,0 +1,169 @@
+\section{Take-away Lessons}\label{sec:rcc_lessons}
+
+
+In recent years, much work has been done to understand BGP's
+behavior, and much has been written about the wide range of problems it
+has.  Some argue that BGP has outlived its purpose and should be
+replaced; others argue that faults arise
+because today's configuration languages are not
+well-designed.  We believe that our evaluation of faults in
+today's BGP configuration provides a better understanding of the
+types of errors that appear in today's BGP configuration and the
+problems in today's configuration languages.  
+%
+%Our evaluation of real-world BGP configuration from operational networks
+%suggests several higher-level lessons about the nature of today's
+%configuration process.  
+We now briefly explore how our findings may help inform the design
+of Internet routing systems in the future.
+
+First, operational networks---even large, well-known, and well-managed
+ones---have faults.  Even the most competent of operators find it
+difficult to manage BGP configuration.  In particular, iBGP is
+misconfigured often.  In fact, in the absence of a guideline such as
+Theorem~\ref{thm:vis}, it is hard for a network operator to know what
+properties the iBGP signaling graph should have.  Ideally, network
+operators should be able to configure an AS without having to worry
+about whether these types of constraints are satisfied in the first
+place; in other words, a network operator should not be allowed to
+express a configuration that violate properties such as path visibility
+and route validity.  In Chapter~\ref{chap:concl}
+(Section~\ref{sec:rcp}), we discuss a system for disseminating BGP
+routes within an AS called the Routing Control Platform
+(RCP)~\cite{caesar2004,feamster:fdna2004}, which could explicitly
+enforce properties such as route validity and path visibility.
+
+%
+Second, we found that route filters are poorly maintained.  Routes that
+should never be seen on the global Internet (\eg, routes for private
+addresses) are rarely filtered, and the filters that are used are often
+misconfigured and outdated.  We can make significant strides towards
+fixing these types of problems simply by changing the default behavior
+of router filters.  For example, because private address space (\ie, as
+specified in RFC 3330~\cite{rfc3330}) should not be advertised on the
+global Internet, routers could, by default, prevent routes for this
+address space from leaking across AS boundaries.  Of course, network
+operators who required routes for this address space to be advertised
+across AS boundaries (\eg, in cases where a single administrative domain
+comprises multiple ASes) could configure that behavior as an {\em
+exception}, but the default behavior would reduce the likelihood of
+erroneous route leaks.
+
+%
+Third, the majority of the configuration faults that \rcc detected
+resulted from the fact that an AS's configuration is distributed across
+its routers.  Maintaining network-wide policy consistency appears to be
+difficult; invariably, in most ASes there are routers whose
+configuration appears to contradict the AS's desired policy.  A routing
+architecture or configuration management system that enabled an operator
+to configure the network from a centralized location with a high-level
+language would likely prevent many serious faults.
+
+%
+Finally, although operators use tools that automate some aspects of
+configuration, these tools are not a panacea.  In fact, we found cases
+where the incorrect use of these tools {\em caused} configuration
+faults.  This observation suggests that static configuration
+analysis will play an important role in the configuration
+workflow, regardless of future improvements in configuration languages
+or routing architectures.  As long as the routing protocol offers
+flexible configuration, the potential for incorrect behavior exists.
+Our work has demonstrated that detecting incorrect behavior {\em
+proactively} using static configuration analysis is not only
+surprisingly effective, but it is also necessary for detecting faulty
+configurations before they introduce erroneous behavior on a live
+network. 
+
+
+
+\section{Summary}
+\label{s:rcc_concl}
+
+
+Despite the fact that BGP is almost 10 years old, operators continually make
+the same mistakes as they did during BGP's infancy.   Our work takes a
+step towards improving this state of 
+affairs by making the following contributions:
+%\vspace*{-0.05in}
+\begin{itemize}
+\itemsep=-1pt
+%\item We define a high-level correctness specification for BGP and
+%  map that specification to conditions that can be tested with static
+%  analysis.
+\item We use the correctness specification from Chapter~\ref{chap:rlogic}
+  to design and implement 
+  \rccns, a static analysis tool that detects faults by analyzing the
+  BGP configuration across a single AS.  With \rccns, network operators
+  can find many faults {\em before} deploying configurations in
+  an operational network.  \rcc has been downloaded by over seventy network
+  operators.
+\item We use \rcc to explore the extent of real-world BGP
+      misconfigurations.  We have analyzed
+      real-world, deployed configurations from 17 different ASes and
+      detected more than 1,000 BGP configuration faults that had
+      previously gone undetected by operators.
+\end{itemize}
+
+
+
+%framework to the design and implementation of \rccns, a tool that uses
+%static analysis to verify BGP configuration correctness.  Our tool has
+%helped operators debug real-world BGP configuration.  Third, we
+%present our findings on BGP configuration errors and anomalies from
+%static analysis of real-world BGP configurations.  This paper is the
+%first to explore BGP configuration errors using analysis of real-world
+%BGP configuration files.  Finally, we suggest concrete ways to improve
+%BGP's correctness, distinguishing problems that should be fixed with
+%protocol modifications from those that should be fixed with a better
+%configuration language.
+
+In light of our findings, we suggest two ways to make interdomain
+routing less prone to configuration faults.  First, protocol
+improvements, particularly in intra-AS route dissemination, could avert
+many BGP configuration faults.  The current approach to scaling iBGP
+should be replaced.  Route reflection serves a single, relatively simple
+purpose, but it is the source of many faults, many of which cannot be
+checked with static analysis of BGP configuration
+alone~\cite{Griffin2002}.  The protocol that disseminates BGP routes
+within an AS should enforce path visibility and route validity; the
+Routing Control Platform offers one possible solution.
+
+Second, BGP should be configured with a centralized, higher-level
+specification language.  Today's BGP configuration languages enable an
+operator to specify router-level {\em mechanisms} that implement
+high-level policy, but the distributed, low-level nature of the
+configuration languages introduces complexity, obscurity, and
+opportunities for misconfiguration rather than design flexibility or
+expressiveness.  For example, \rcc detects many faults in implementation
+of some high-level policies in low-level configuration; these faults
+arise because there are many ways to implement the same high-level
+policy, and the low-level configuration is unintuitive.  Ideally, a
+network operator would never touch low-level mechanisms (\eg, the
+community attribute) in the common case.  Rather than configuring
+routers with a low-level language, an operator should configure the {\em
+network} using a language that directly reflects high-level
+policies.
+
+
+
+%, and this specification could be ``compiled'' into
+%configuration statements that implement the policies.
+% (Such a specification would also be much easier to analyze
+%with a tool like \rccns.)
+
+
+
+%XXX FUTURE WORK: IGP/iBGP...
+
+%% The hard stuff, like iBGP, isn't going to get better.  Same with things
+%% like MED osc.  For these, we need protocol changes.  This is part of our
+%% ongoing work (\eg, route servers to impose a total ordering, scrap iBGP
+%% to avoid partitions, guarantee consistent export, etc.)
+
+%% Same thing with safety.  It's fundamental to the protocol (Arrow's
+%% impossibility thm), and protocol changes must happen to solve this
+%% problem correctly.
+
+%% For other stuff that people mess up, we need better interfaces.  These
+%% interfaces should reflect that there are only a handful of tasks that
+%% operators need to perform.

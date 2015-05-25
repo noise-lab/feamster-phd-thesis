@@ -1,0 +1,100 @@
+\section{Challenges Introduced by RCP}\label{sec:weaknesses}
+
+%The RCP architecture potentially introduces limitations and weaknesses;
+Separating routing state from the routers can potentially introduce
+robustness, scalability, speed, and consistency problems.  The RCP
+architecture must address these challenges to be viable.  In this
+section, we briefly highlight these issues and sketch
+possible solutions to these problems.  We are
+addressing these problems in greater detail in our current work,
+and we are implementing a prototype of RCP using OSPF and BGP
+data from AT\&T's domestic IP backbone~\cite{rcp-tr}.
+
+It might seem that moving complexity out of the routers
+into RCP creates new problems because of the additional flexibility
+in path assignment and because we are adding a component to the routing
+system.  However, management systems and verification tools
+for BGP configuration already exist today, but they are more complicated
+and constrained because they must work around the artifacts of today's
+routing system.  Thus, adding RCP to the routing system does not
+really constitute ``more functionality''; rather, RCP moves
+routing functionality to a part of the system where complexity can be
+better managed.
+
+%We briefly highlight some of the potential challenges presented by the RCP
+%architecture and our proposed solutions to these problems.  We discuss
+%these problems in more detail in an accompanying technical
+%report~\cite{rcp-tr}. 
+
+
+ {\bf Robustness.} To avoid introducing a single point of failure, RCP
+  should be distributed across multiple {\em RCP servers} (RCSes).
+  These servers must maintain a consistent view of the available routes
+  to ensure that all routers receive consistent, loop-free paths.  The
+  RCSes must employ a protocol that recognizes when an AS becomes
+  partitioned and guarantees that each partition receives routing
+  information that is consistent within its partition.  We are currently
+  studying the types of inconsistencies that can result from various
+  combinations of partitions.  Our preliminary results suggest that
+  even if a network is partitioned, RCSes in separate partitions cannot
+  create a forwarding loop.  This result follows from the fact that
+  network partitions are caused by partitions of the IGP (\eg, OSPF)
+  topology, and RCSes rely on the IGP to exchange routes with each other
+  and with BGP routers.  Thus, a protocol that elects an RCS for
+  each partition guarantees correct, loop-free forwarding.
+
+
+%%   Our preliminary results suggest that,
+%%   because network partitions result from a partition in the internal
+%%   routing protocol (\eg, OSPF), the types of partitions that can cause
+%%   RCP-induced forwarding loops are not generally possible and that a
+%%   protocol that allows each RCS to determine which RCS learns the most
+%%   candidate routes within its partition (and, thus, which RCS is the
+%%   ``master'') suffices to guarantee correct, loop-free
+%%   forwarding.
+%\footnote{Forwarding loops
+%  resulting from inconsistent route advertisements require two RCP
+%  servers with different routing choices to assign routes to the same
+%  set of routers.  In other words, such inconsistencies require RCP
+%  servers in two partitions $A$ and $B$ to share some set of routers,
+%  but $(A \cup B - A \cap B) \neq \phi$.  We have shown that, if $(A
+%  \cup B - A \cap B) \neq \phi$, then the RCP servers in $A$ and $B$
+%  cannot be partitioned.}.
+
+
+%We believe that existing state machine replication
+%  or primary/backup schemes may be applicable.
+
+ {\bf Scalability.} RCP must be able to handle thousands of eBGP
+  sessions and hundreds of iBGP sessions, each with thousands of routes.
+  Today's high-end desktop machines satisfy the memory and computational
+  requirements for RCP.  In our current work, we are exploring ways to
+  distribute RCP functionality across many physical machines.  One
+  design idea we are currently pursuing involves dividing the RCP into a
+  {\em BGP engine}, which is responsible for establishing the (possibly
+  large number of) BGP sessions to routers within the AS (and,
+  ultimately, across ASes) and whose sole responsibility is state
+  management; and an {\em RCP engine}, which receives the routing
+  information from the machines running BGP engines and implements the
+  logic that we have discussed in this paper (\eg, path computation,
+  configuration management, maintaining consistency, etc.).  
+  
+
+ {\bf Convergence speed.} RCP must compute routes using BGP and
+  IGP information for every router in the AS and propagate the results
+  of this computation in a timely fashion as BGP and IGP topologies
+  change.  Because RCP is an active participant in both the BGP and
+  IGP protocols, delays due to message passing should be no worse than
+  in today's routing architecture.
+
+ {\bf Transient inconsistencies.}  Transient inconsistencies might occur
+  if routers do not receive updates from RCP in a certain order. For
+  example, if a router's path to a destination includes routers for
+  which RCP has already assigned a new path, transient forwarding
+  loops could result.  Although this pathology is likely no worse than the
+  transient loops that occur during iBGP convergence today, it deserves
+  further attention.  In the future, routers might be modified to
+  support a ``commit'' operation to allow for all routers along a path
+  to execute an update at the same time.
+
+

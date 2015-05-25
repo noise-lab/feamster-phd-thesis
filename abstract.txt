@@ -1,0 +1,53 @@
+The Internet is composed of thousands of autonomous, competing networks
+that exchange reachability information using an interdomain routing
+protocol.  The performance of these networks depends on many dynamic
+conditions.  Traffic shifts, equipment failures, planned maintenance,
+and topology changes in other parts of the Internet can all degrade
+performance.  To maintain good performance, network operators must
+continually reconfigure the routing protocols.
+
+Internet routing offers each independent network tremendous flexibility
+in expressing routing policy and adapting to changing conditions.  These
+policies, encoded in distributed router configurations, play an
+important role in expressing various economic and performance
+requirements.  Network operators writing configurations make mistakes;
+they may also specify policies that interact in unexpected ways with
+policies in other networks.  These mistakes and unintended interactions
+lead to routing faults, which disrupt end-to-end connectivity.  To avoid
+inadvertently degrading network performance, operators must determine
+the effects of configuration changes before deploying them on a live
+network.
+
+Towards improving the correctness and predictability of Internet
+routing, this dissertation presents proactive techniques to help
+operators configure the Internet routing system.  We first tackle
+challenges related to configuration faults.  We present examples of
+real-world routing faults and proposes a systematic framework to
+classify, detect, correct, and prevent them.  We describe the design and
+implementation of rcc ("router configuration checker"), a tool that uses
+static configuration analysis to detect classes of faults that commonly
+result from operator mistakes.  We used rcc to detect faults in 17
+different networks, including several nation-wide Internet service
+providers.  To date, rcc has been downloaded by over seventy network
+operators.
+
+Towards making Internet routing more predictable, we present algorithms
+that help network operators predict how the router configurations within
+an network will affect the flow of traffic through that network, given only a
+static snapshot of the network state.  We describe an emulator based
+on these algorithms that exploits the unique characteristics of routing
+data to reduce computational overhead.
+
+A critical aspect of guaranteeing correct and predictable Internet
+routing is ensuring that the routing protocol will not oscillate.  Using
+a formal model of today's interdomain routing protocol, we prove
+necessary and sufficient conditions on policy to guarantee that
+unintended policy interactions will never cause oscillations.  We first
+demonstrate that certain rankings that are commonly used in practice may
+not ensure routing stability.  We then prove that, when providers can
+set rankings and filters autonomously, guaranteeing that the routing
+system will converge to a stable path assignment essentially requires
+networks to rank routes based on shortest path length.  We discuss the
+implications of these results for the future of interdomain routing and
+propose new architectural directions that could make Internet routing
+more intrinsically correct and predictable.

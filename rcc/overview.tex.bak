@@ -1,0 +1,669 @@
+\section{\rcc Design}
+\label{sec:overview}
+
+\rcc analyzes both single-router and network-wide properties of BGP
+configuration and outputs a list of configuration faults.  \rcc checks
+that the BGP configuration satisfies a set of constraints, which are
+based on a correctness specification.  Figure~\ref{fig:rcc_arch}
+illustrates \rccns's high-level architecture.
+
+We envision that \rcc has three classes of users: 
+those that wish to run \rcc with no modifications, 
+those that wish to add new constraints concerning the existing
+specification, 
+and
+those that wish to augment the high-level specification.
+%Although we believe most network operators have seemed content to run
+%\rcc ``out of the box'', 
+\rccns's modular design allows users to specify
+other constraints without changing the system internals.
+Some users may wish to extend the high-level specification to include other
+aspects of correctness (\eg, safety~\cite{Griffin2002}) and map those
+high-level specifications to constraints on the configuration.
+
+%Designing such a tool presents several challenges.  
+%
+%First, configuration is complex and distributed across hundreds of
+%routers.  Additionally, we must design a way to represent the
+%configuration in a format that is amenable to checking constraints.
+Section~\ref{sec:factoring} describes how we factor distributed
+configuration to reason about its behavior and 
+how \rcc generates a normalized representation of the
+configuration that facilitates constraint checking. 
+%
+To detect configuration faults, we must specify, at
+a high level, correct behavior for an Internet routing protocol; we
+outline this specification in Section~\ref{sec:correct}. 
+%
+Using this high-level specification and our method for reasoning
+about configuration as a guide, we must then derive the
+actual correctness constraints that \rcc can check against the 
+normalized configuration.  Section~\ref{sec:mapping} explains this process.
+
+
+
+
+\begin{figure}[t]
+\centering\epsfig{file=rcc/figures/rcc_arch.eps, width=0.9\linewidth}
+\caption{Overview of \rccns.}
+\label{fig:rcc_arch}
+\end{figure}
+
+%In
+%fact, we believe that it is highly unlikely that network operators would
+%have paid attention to \rcc had it not been software that works ``out of
+%the box'' on existing configurations without requiring any other
+%operator input.
+
+
+%\rcc detects faults by testing a set of
+%constraints on BGP configuration based on the correctness specification
+%we propose in Section~\ref{sec:correct} and outlined in more detail in
+%Section~\ref{s:verification}.  These faults may be latent 
+%(some of these are potentially active), but \rcc may also find {\em
+%benign} (\ie, false positives).  \rcc is also not guaranteed to catch
+%all latent faults.  
+
+
+
+%%% Set the fence here
+
+%
+%A {\em potentially active fault} is a latent fault for 
+%A latent fault is a {\em potentially active fault} if it may
+%cause BGP to violate correctness, but may require a particular execution
+%path to
+%actually cause a violation.  
+%
+
+
+
+%% Why is this task challenging?
+%% Analyzing BGP routing is akin to analyzing a distributed program,
+%% because most (if not all) faults that occur in practice are caused by
+%% statements in router configurations.  Because BGP configuration is
+%% distributed, analyzing the network-wide behavior of a set of routers
+%% requires the ``joint analysis'' of their configurations and an
+%% assessment of the interactions and dependencies between them.
+%% Additionally, configuration languages are flexible: the same high-level
+%% routing behavior (\eg, a particular policy) can be implemented in
+%% multiple ways on a given set of routers.  In addition, each router
+%% vendor has a different configuration language, and these languages are
+%% not entirely feature-compatible.  \rcc addresses these challenges by
+%% using a vendor-independent normalized configuration format based on
+%% the relational data model.
+
+%% move to related work
+%Other tools perform some
+%single-router consistency checks that catch fundamental
+%mistakes~\cite{Caldwell2003}, 
+%%but verifying BGP correctness requires
+%%analyzing a {\em network-wide} view of configuration and a {\em
+%%definition of correctness}.  \rcc executes network-wide correctness
+%%checks based on a high-level definition of correctness.
+
+
+%We believe that one reason that
+%\rcc has enjoyed a relatively high level of acceptance is because it
+%works ``out of the box'': it provides useful information to network
+%operators while requiring no additional effort on their part.
+
+
+%\subsection{Approach}
+
+%Figure~\ref{fig:rcc_arch} illustrates the \rccns's high-level approach
+%to BGP configuration checking.  \rcc expects a set of router
+%configurations from a single AS, which can be collected from the routers
+%using existing tools such as ``rancid''~\cite{www-rancid}.  Ultimately,
+%\rcc outputs information that helps operators track down BGP
+%configuration errors.  To do this, \rcc must first have a set of
+%properties to check;  describes our high-level
+%approach for describing these checks.  Because \rcc attempts to make
+%statements about a single protocol using only the configurations, it
+%must make some assumptions, which we describe in
+%Section~\ref{sec:assumptions}.  Section~\ref{sec:challenges} explains
+%why checking properties of distributed router is
+%difficult in practice.
+
+
+
+\subsection{Factoring Routing Configuration} 
+\label{sec:factoring}
+
+\begin{figure}
+%\centering\epsfig{file=rcc/figures/overview.eps, width=\linewidth}
+\centering\epsfig{file=rcc/figures/factoring.eps, angle=270, width=\linewidth}
+\caption{Factoring BGP configuration.}
+\label{fig:overview}
+\end{figure}
+
+
+In this section, we describe a systematic approach to analyze 
+BGP configuration.
+We
+factor a network's configuration into the following three
+categories: 
+
+
+{\bf 1. Dissemination.}  A router's configuration determines which
+  other routers that router will exchange BGP routes with.  A 
+  router has two types of BGP sessions: those to routers in its own AS
+  (internal BGP, or ``iBGP'') and those to routers in other ASes
+  (external BGP, or ``eBGP'').  A small AS with only two or three
+  routers may have only 10 or 20 BGP sessions, but large backbone
+  networks typically have more than 10,000 BGP sessions, more than
+  half of which are iBGP sessions.  Dissemination primarily concerns
+  flexibility in iBGP configuration. 
+
+  The session-level BGP topology determines how BGP routes propagate
+  through the network.  In small networks, iBGP is configured as a
+  ``full mesh'' (every router connects to every other router). To
+  improve scalability, larger networks typically use {\em route
+  reflectors}.  A route reflector selects a single best 
+  route and announces that route to all of its ``clients''.  Route
+  reflectors can easily be misconfigured (we discuss iBGP misconfiguration
+  in more detail in Section~\ref{sec:visibility}).  Incorrect
+  iBGP topology 
+  configuration can create persistent forwarding loops and
+  oscillations~\cite{Griffin2002}.  
+
+{\bf 2. Filtering.}  A router's configuration can prevent a certain
+  route from being accepted on inbound or readvertised on outbound.
+  Configuring filtering is complicated because global behavior depends
+  on the configuration of individual routers. A router may ``tag'' an
+  incoming route to control whether some other router in the AS
+  filters the route.
+
+{\bf 3. Ranking.}  Any given router may learn more than one route to a
+  destination, but must select a single best route.  Configuration
+  allows a network operator to specify which route is the most preferred
+  route to the destination among several candidates.
+
+  Configuration also manipulates route attributes
+  for one of the following reasons: (1)~controlling how
+  a router ranks candidate routes, (2)~controlling the ``next hop'' IP
+  address for the advertised route, and (3)~labeling a route to
+  control whether another router filters it.
+
+
+%\subsection{Generating the Normalized Representation}
+
+%\rcc normalizes BGP configuration to facilitate checking constraints.
+\rcc implements the normalized representation as a set of relational
+database tables.  This approach allows 
+constraints to be expressed independently of router configuration
+languages.  As configuration languages evolve and new ones emerge, only
+the parser must be modified.  It also
+facilitates testing network-wide properties, since all of
+the information related to the network's BGP configuration can be
+summarized in a handful of tables.  A relational structure is natural
+because many sessions share common attributes (\eg, all sessions to the
+same neighboring AS often have the same policies), and many policies
+have common clauses (\eg, all eBGP sessions may have a filter that is
+defined in exactly the same way).  Table~\ref{tab:if} summarizes these
+tables; Section~\ref{sec:parser} details how \rcc populates them.
+
+%; a more na\"{i}ve approach would require
+%scanning all information about router loopback addresses and session
+%information for every iBGP session.
+
+\begin{table}[t]
+{\footnotesize
+\begin{tabular}{lp{2in}}
+{\bf Table} & {\bf Description} \\ \hline
+%%%%%%%%%%%%%%%%%%%%
+%router\_global & 
+{\tft global options} & router, various global options (\eg, router ID)\\
+
+%%%%%%%%%%%%%%%%%%%%
+%sessions & 
+{\tft sessions} & router, neighbor IP address, eBGP/iBGP,
+pointers to policy, options (\eg RR client)\\ 
+
+%%%%%%%%%%%%%%%%%%%%
+%networks & 
+{\tft prefixes} & router, prefix originated by this router\\
+
+%%%%%%%%%%%%%%%%%%%%
+%prefix\_acls & 
+{\tft import/export filters} & normalized representation of filter:
+IP range, mask range, permit or deny\\ 
+
+%%%%%%%%%%%%%%%%%%%%
+%route\_maps & 
+{\tft import/export policies} & normalized representation of
+policies \\
+%; each policy represented by one or more rows
+%; each row is a
+%clause in the policy \\ 
+
+
+%%%%%%%%%%%%%%%%%%%%
+%router\_loopbacks & 
+{\tft loopback address(es)} & router, loopback IP address(es)\\
+
+%%%%%%%%%%%%%%%%%%%%
+%router\_interfaces & 
+{\tft interfaces} & router, interface IP address(es)\\
+
+
+%%%%%%%%%%%%%%%%%%%%
+%routes & 
+{\tft static routes} & static routes for prefixes\\ \hdashline[1pt/1pt]
+
+\multicolumn{2}{c}{{\bf Derived or External Information}} \\
+
+%%%%%%%%%%%%%%%%%%%%
+%parse\_errors & 
+{\tft undefined references} & summary of policies and filters that a
+BGP configuration referenced but did not define\\
+
+%%%%%%%%%%%%%%%%%%%%
+%bogon\_list & 
+{\tft bogon prefixes} & prefixes that should always be filtered on eBGP
+sessions~\protect\cite{www-cymru-bogon}\\ 
+
+
+%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%
+%as_regexps & \\
+%comm_regexps & \\ 
+%communities & & \\ 
+%router_sessions & \\
+%sessions_shutdown & \\
+\end{tabular}
+}
+\caption{Normalized configuration representation.}
+\label{tab:if}
+\end{table}
+
+
+
+\subsection{Defining a Correctness Specification}
+\label{sec:correct}
+
+\rccns's correctness specification uses our previous work on the routing
+logic~\cite{Feamster2003b} as a starting point. \rcc checks two 
+aspects of correctness: {\em path visibility} and \emph{route
+validity}. In the context of BGP, a {\em route} is a BGP
+message that 
+advertises reachability to some destination via an associated path.  A
+{\em path} is a sequence of IP hops (\ie, routers) between two IP
+addresses.  We say that a path is {\em usable} if 
+it: (1)~reaches the destination, and (2)~conforms to the
+routing policies of ASes on the path.
+
+
+
+%{\bf Path visibility}:
+{\em Path visibility} implies that every router learns at least one
+route for each destination it can reach via a usable path.
+%If every router learns at least one route for each destination that it
+%can reach via a usable path, then {\em path visibility} is satisfied.
+%If there is a path to a destination that
+%does not violate the policies of the routers along the path, {\em and}
+%there is some valid route to the destination at a router, then the
+%router is said to have a {\em visible path}.  
+Path visibility may be violated by problems with either dissemination or
+filtering.  An example of a path visibility violation is an
+iBGP configuration that prevents the dissemination of BGP routes
+to external destinations, even though usable paths to those
+destinations exists.
+%\rcc detects
+%configuration faults that may lead to 
+%violations of path visibility (and hence, to some end hosts losing
+%reachability to others even though usable paths between those
+%end hosts are present).
+%Section~\ref{sec:visibility} details \rccns's visibility checks.
+
+%{\bf Route validity}: 
+%If every route that each router learns corresponds
+%to a usable path, and the path advertised by each route corresponds to
+%the one that packets take when using that route (\ie, sending packets
+%towards the next hop for that route), then {\em route validity} is
+%satisfied.  
+{\em Route validity} implies that every route learned by a router 
+describes a usable path, and that this
+path corresponds to the actual path taken by packets sent
+to the destination. 
+Problems with dissemination or filtering can cause route
+validity violations.  A forwarding loop is an example of a route
+validity violation: a router learns a route for a destination, but
+traffic sent on the corresponding path never reaches that destination.
+%A route that is not valid may prevent packets that use that
+%route from reaching the intended destination or cause packets to take a
+%different path than the advertised route.
+
+%Section~\ref{sec:validity} details \rccns's validity checks.
+
+\rcc finds path visibility and route validity violations in BGP
+configuration only. To make general 
+statements about path visibility and route validity, \rcc assumes
+that the internal routing protocol (\ie, interior gateway protocol, or
+``IGP'') used to establish routes between
+any two routers within a  
+AS is operating correctly.  BGP requires 
+the IGP to operate correctly because iBGP sessions may
+traverse multiple IGP hops and because the ``next hop'' for
+iBGP-learned routes is typically several IGP hops away.
+
+%\begin{assumption}
+%Protocols at lower layers satisfy
+%path visibility and route validity. 
+%\end{assumption}
+%This assumption allows us to ignore the correctness of protocols at
+%lower layers (these should also be verified, but this task is beyond the
+%scope of this paper).  For example, we assume that if a destination is
+%contained in the IGP, then routers will correctly forward packets to
+%that destination.
+
+
+The correctness specification that we have presented addresses
+{\em static} properties of BGP, {\em not} dynamic behavior
+(\ie, its response to changing inputs, convergence time, etc.). BGP,
+like any distributed protocol, may experience periods of transient
+incorrectness in response to changing inputs.  \rcc detects faults that
+cause {\em persistent} failures.  Previous work has
+studied sufficient conditions on the relationships between iBGP and IGP
+configuration that must be satisfied to guarantee that iBGP
+converges~\cite{Griffin2002}; these constraints require parsing the IGP
+configuration, which \rcc does not yet check.
+%
+The correctness specifications and constraints in this paper assume that,
+given stable inputs, the routing protocol {\em eventually} converges to
+some steady state behavior.
+
+Currently, \rcc only detects faults in the BGP
+configuration of a {\em single AS} (a network operator typically does
+not have
+access 
+to the BGP configuration from other ASes).  Because an AS's BGP
+configuration explicitly controls both dissemination and filtering, many
+configuration faults, including partitions, route 
+leaks, etc., are evident from the BGP configuration of a single AS.
+
+
+%We define constraints that must be satisfied to guarantee that the
+%above properties hold.  For example, when a router imports a route
+%from a neighboring AS, validity requires that it should not permit
+%routes to prefixes that (1)~originate within its own as or (2)~are
+%private or unallocated.  Similarly, when a router advertises a route
+%to another router via iBGP, validity requires that the next-hop
+%attribute of that route be reachable, and that every route along the
+%IGP path to that next hop agree on the same next-hop.  To derive a
+%reasonable set of tests, we perform this exercise for both validity
+%and visibility for every step of BGP's operation.
+
+
+
+%\subsection{Assumptions and Limitations}\label{sec:assumptions}
+
+\subsection{Deriving Constraints and Detecting Faults}\label{sec:mapping}
+
+
+\begin{table}[t]
+\hspace*{-0.1in}
+{\footnotesize
+\begin{tabular}{@{}p{1.26in}p{2in}@{}}
+{\bf Problem} & {\bf Possible Active Fault}\\ \hline \hline
+%
+\multicolumn{2}{@{}c@{}}{{\it Path Visibility}} \\ \hline
+{\bf Dissemination Problems} \\
+Signaling partition: & Router may learn a suboptimal route \\
+\hspace*{0.1in} - of route reflectors &     or none at all. \\ 
+\hspace*{0.1in} - within a RR ``cluster'' \\
+\hspace*{0.1in} - in a ``full mesh'' \\
+
+Routers with duplicate: & {Routers may incorrectly drop routes.} \\ 
+\hspace*{0.1in} - loopback address \\ 
+\hspace*{0.1in} - cluster ID \\
+
+iBGP configured on one end & {Routers won't exchange
+routes.} \\  
+iBGP not to loopback & {iBGP session fails
+when one interface fails.} \\  
+%synchronization enabled & \parbox{2in}{iBGP route won't be used if the
+%route doesn't also appear in IGP.} \\
+
+\hline \hline
+\multicolumn{2}{@{}c@{}}{{\it Route Validity}} \\ \hline
+{\bf Filtering Problems} \\
+transit between peers & \parbox{2in}{Network carries
+traffic ``for free''.} \\
+inconsistent export to peer & \parbox{2in}{Violation of contract.} \\
+inconsistent import & \parbox{2in}{Possible unintentional
+``cold potato'' routing.} \\
+%{\bf Undefined References} \\
+\parbox{1.18in}{
+eBGP session: \\
+\hspace*{0.1in} - w/no filters \\ 
+\hspace*{0.1in} - w/undef. filter \\
+\hspace*{0.1in} - w/undef. policy \\
+filter: \\
+\hspace*{0.1in} - w/missing prefix \\
+policy: \\
+\hspace*{0.1in} - w/undef. AS path \\
+\hspace*{0.1in} - w/undef. community \\
+\hspace*{0.1in} - w/undef. filter \\
+}
+& \parbox{2in}{
+\begin{itemize}
+\itemsep=-1pt
+\item leaked internal routes
+\item re-advertising bogus routes
+\item accepting bogus routes from neighbors
+\item unintentional transit between peers
+\end{itemize}
+}
+\\
+%\hdashline[1pt/1pt]
+
+
+
+\hdashline[1pt/1pt]
+{\bf Dissemination Problems} \\
+prepending with bogus AS & \parbox{2in}{AS path is no longer valid.} \\
+originating unroutable dest. & \parbox{2in}{Creates a blackhole.} \\ 
+incorrect next-hop & {Other routers may be unable to reach
+the routes for a next-hop that is not in the IGP.} \\
+
+\hline\hline
+\multicolumn{2}{@{}c@{}}{{\it Miscellaneous}} \\ \hline
+
+
+{\bf Decision Process Problems} \\
+\parbox{2in}{nondeterministic MED \\
+age-based tiebreaking} 
+& \parbox{2in}{Route selection depends on message order.}
+
+
+\end{tabular}
+}
+
+
+\caption{BGP configuration problems that \rcc detects and their
+potentially active faults.} 
+\label{tab:rcc_tests}
+\end{table}
+
+Deriving constraints on the configuration itself that guarantee that the
+correctness specification 
+is satisfied is challenging. We reason about how the aspects of
+configuration from Section~\ref{sec:factoring} affect each correctness
+property and derive appropriate constraints for each of these aspects.
+Specifically, Table~\ref{tab:rcc_tests} summarizes the correctness
+constraints that 
+\rcc checks, which follow from determining which aspects of
+configuration (from Section~\ref{sec:factoring}) affect each aspect of the
+correctness specification (from Section~\ref{sec:correct}).
+These constraints are an attempt to map the path visibility and route
+validity specifications to constraints on BGP configuration that can be
+checked against the actual configuration.  
+
+
+%Path visibility constraints typically address
+%potential problems with how iBGP routes propagate through the AS, or
+%``iBGP signaling'' (Section~\ref{sec:visibility}).  \rccns's route
+%validity constraints test 
+%potential problems with policy configuration or how routes are
+%advertised (Section~\ref{sec:validity}).  
+%The ``miscellaneous''
+%constraints can affect both
+%path visibility and route validity.
+Ideally, operators would run \rcc to detect configuration faults {\em
+before} they are deployed.  Some of \rccns's constraints detect faults
+that would most likely become active immediately upon deployment.  For
+example, a router that is advertising
+routes with an incorrect next-hop attribute will immediately prevent
+other routers that  
+use those routes from forwarding packets to those
+destinations.  In this case, \rcc can help the operator diagnose
+configuration faults and prevent them from introducing failures on the
+live network.  
+%Many constraints in Table~\ref{tab:rcc_tests} detect {\em
+%latent} faults, detection of latent faults is very important because the
+%operator may not unaware of an erroneous configuration until some input
+%actually triggers the fault (at which time the failure can be quite
+%serious).  
+
+Many of the constraints in Table~\ref{tab:rcc_tests} concern faults that
+could remain undetected even after the configuration has been deployed
+because they remain masked until some sequence of messages triggers
+them. In these cases, \rcc can help operators find faults that could
+result in a serious failure.  Section~\ref{sec:visibility} describes one
+such path visibility fault involving dissemination in iBGP in further
+detail. 
+%For example, an operator will likely not notice that a BGP
+%session to a neighboring AS applies an undefined filter until that
+%neighbor ``leaks'' an invalid route.  
+%
+In other cases, checking constraints implies some knowledge of high-level
+policy (recall that a {\em usable} path conforms to some high-level
+policy).  In the absence of a high-level policy specification language,
+\rcc must make inferences about a network operator's intentions.
+Section~\ref{sec:validity} describes several route validity faults where
+\rcc must make such inferences.
+
+
+%\rcc checks the constraints against the normalized representation of the
+%BGP configuration.  Section~\ref{sec:visibility} describes how \rcc uses
+%the BGP session-level topology to detect path visibility faults in iBGP.
+%Section~\ref{sec:validity} explains how \rcc uses beliefs and closures
+%to detect route validity faults.  Section~\ref{sec:verifier} describes
+%how \rcc checks these constraints in practice.
+
+
+\input{design}
+
+
+
+%Note that we do {\em not}
+%assume that BGP converges: its steady state for a fixed input
+%might be oscillatory.
+
+
+%\subsubsection{Challenges}\label{sec:challenges}
+
+%BGP configuration errors are difficult to detect because they often
+%appear far from the actual source of the error and may not appear
+%immediately after the deployment of an erroneous configuration.
+%(Sections~\ref{sec:validity} and~\ref{sec:visibility} discuss at greater
+%length configuration errors that are not immediately apparent.)  As a
+%result, operators must often search for errors in a trial-and-error
+%fashion.
+
+%\rcc performs both ``basic'' single-router configuration checks and more
+%complicated network-wide checks.  We discovered that even syntactic
+%errors on a single router often fail silently: in one network, \rcc
+%found a session that applied an undefined filter that would have allowed
+%that AS's customer to advertise any prefix.  These types of errors are
+%relatively easy to find because they only involve looking at single
+%configuration files in isolation.
+%%\footnote{Previous work
+%% single-router checks that do not specifically address
+%%the correctness of any particular protocol~\cite{FeldmannXXXX}; we
+%%perform similar checks for BGP and extend
+%%this work in several ways: 
+%%(1)~we report statistics on the errors we have found in practice; (2)~we
+%%have made our tool publicly available to network operators; and (3)~our
+%%tool is in use by many ISPs.}.  
+%Analyzing the {\em network-wide} behavior of BGP configuration, on the
+%other hand, requires synthesizing configuration across all of the
+%routers in the AS, which presents several challenges:
+%\begin{CompactEnumerate}
+
+%\item {\em BGP configuration is distributed.}  Verifying BGP
+%  configuration requires checking dependencies across multiple routers.
+%  For example, determining how (and whether) routes propagate between
+%  routers requires parsing the configurations of every router in the
+%  network to construct an {\em session-level graph} of iBGP sessions, as well
+%  as determining how policies are applied on each of those sessions (and
+%  how the policies relate to one another).
+
+%\item {\em BGP configuration is network-specific.}  BGP
+%  configuration is flexible enough to allow network operators to
+%  implement the same behavior in many different ways.  In fact, an
+%  operator may implement the {\em same} policy in several different ways
+%  on routers in the same AS.  \rcc must {\em canonicalize} BGP
+%  configuration by representing it in some normalized format.
+
+%\item {\em BGP configuration is vendor-specific.}  Any single AS may may
+%  use routers from several different router vendors: nearly every
+%  network we analyzed used at least two router vendors, and one small
+%  ISP we analyzed used routers from four different vendors.  To analyze
+%  these networks, \rcc must be able to represent BGP configuration in
+%  some {\em vendor-independent} format.  In practice, designing such a
+%  format is tricky: Vendor configuration languages have vastly different
+%  syntax and even have slight differences in semantics.  For example, in
+%  Cisco IOS, the next-hop attribute is assigned as a session-level
+%  option, whereas in JunOS, the next-hop is assigned in policy statements.
+
+%\end{CompactEnumerate}
+
+%To address these challenges, we represent the network-wide set of
+%configuration files as a collection of database tables.  This
+%normalized format allows \rcc to quickly access information about
+%groups of BGP sessions or policies and makes the verification process
+%independent from configuration syntax and specifics.  We describe the
+%normalized format in more detail in Section~\ref{sec:parsing}.
+
+
+%% We address these challenges by viewing BGP as a distributed program,
+%% rather than a protocol that conforms to a set specification.\footnote{We
+%% explain in Section~\ref{s:related} why the absence of a 
+%% specification makes verifying wide-area routing using
+%% approaches like model checking infeasible.}  We determine a set of
+%% invariants that 
+%% should hold true independent of the details of configuration.  Many of
+%% these invariants are verifiable using static analysis.
+%% %
+%% We also determine which invariants require checking configurations at a
+%% single router and which require checks across multiple routers.
+%% Fortunately, we find that many serious problems can be uncovered with
+%% checks that only require configurations from routers {\em within a
+%% single network}.
+%\footnote{Griffin and Wilfong's ``safety'' violation
+%caused by incompatible policies in different networks is an
+%exception~\cite{Griffin2002c}; see Section~\ref{s:safety}.}  
+
+%% \item {\em Defining ``correctness'' is difficult.}  Operators configure BGP
+%% to achieve a variety of tasks.  Defining
+%% ``correctness'' for a protocol that can behave in many ways is
+%% difficult.  We use the {\em routing logic}~\cite{Feamster2003b} to help
+%% us define correctness properties and constraints.
+
+
+
+%\rcc performs static analysis on a set of BGP configurations from
+%routers in a single AS and outputs a list of faults.
+%Figure~\ref{fig:rcc_arch} illustrates this approach.  
+%Section~\ref{sec:correct} defines a specification for two aspects of
+%routing correctness---path visibility and
+%route validity.
+%\rcc normalizes
+%vendor-specific router configurations into an normalized
+%format (Section~\ref{sec:parsing}),
+%analyzes the normalized format
+%(Section~\ref{s:verification}), and produces a list of faults.
+
+

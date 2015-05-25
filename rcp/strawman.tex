@@ -1,0 +1,643 @@
+%%%
+%%% strawman.tex
+%%%
+
+
+\subsection{Architectural Principles for Routing}\label{sec:principles}
+
+%% In this subsection, we describe the challenges of managing BGP within a
+%% backbone network. Managing intra-AS routing presents three primary
+%% challenges: (1)~the outcome intra-AS routing
+%% depends on interactions between multiple routing protocols,
+%% (2)~operators have indirect control over BGP's behavior, and (3)~because
+%% iBGP's routing decisions are decentralized, common network management
+%% and diagnosis tasks become more difficult.  The rest of this subsection
+%% surveys these problems in further detail.
+
+%% Despite the aspects of BGP that introduce fundamental problems and
+%% stifle innovation, little attention has focused on designing protocol
+%% improvements that fix these problems.  This lack of attention is largely
+%% due to the fact that today's routing architecture does not support
+%% innovation.  In this subsection, we describe three architectural principles
+%% that will help facilitate innovation in interdomain routing.  In the
+%% process, we describe specific aspects of today's routing system that
+%% violate these principles.
+
+In this subsection, we present three architectural principles for
+reducing interdomain routing complexity:
+
+\begin{enumerate}
+\itemsep=-1pt
+% 1
+\item The routing architecture must base its routing assignments
+on a consistent view of routing state. 
+% 2
+\item The interfaces between the routing protocols must minimize
+unexpected or unwanted interactions.
+% 3
+\item The interdomain routing mechanisms must
+directly support flexible, expressive policies.
+\end{enumerate}
+Each paragraph in this subsection discusses one of these principles.
+For each principle, we present a high-level rationale, followed
+by specific examples of how today's interdomain routing architecture
+violates the principle.  For each of these examples, we suggest how
+adhering to the architectural principle helps solve the problem.
+
+%% In this subsection, we propose several architectural principles for
+%% interdomain routing, all of which are rooted in traditional systems
+%% design arguments, with the following goals in mind: (1)~to enable
+%% innovation by fostering a more open platform for interdomain routing;
+%% and (2)~to mitigate complexity of the interdomain routing system in
+%% order to make network management easier.  To make the deployment of an
+%% extensible routing platform feasible, we must keep both
+%% goals in mind; in particular, the latter goal is the ``tipping point''
+%% that gives operators an incentive to deploy an architecture based on
+%% these principles.
+
+\paragraph{Compute Routes Using Consistent State}
+
+Routing state and logic should be co-located with the system components
+that are assigning routes.  The logical participants in an interdomain
+routing protocol are the {\em ASes\/}, not the individual routers.  The
+interdomain routing architecture should view each AS as a single
+participant and base routing decisions on a network-wide view of
+available routes and configuration state; the routers, on the other
+hand, should forward data traffic without concern about how the routes
+are computed.  The current interdomain routing system violates this
+architectural principle in the following three ways:
+%
+%The network ``core'' should maintain as little state as possible and the
+%intelligence in networks should exist at endpoints.  
+%Although the original Internet routing architecture incorporated the
+%spirit of the end-to-end argument, 
+
+%This argument holds
+%important lessons for interdomain routing.  
+%Routing is a distributed program that assigns IP-level paths to each
+%destination.  
+
+
+%First, {\em placing the ``intelligence'' of the routing protocol in
+%the routers themselves prevents experimentation with and rapid
+%deployment of new features}.  Many of the features of the interdomain
+%routing system have ended up in the hands of router vendors because,
+%to date, the best (and, arguably, the only) place to add functionality
+%to the network is in the routers themselves.  Unfortunately, because
+%most innovation at the routing layer involves compliance with
+%proprietary hardware and software, as well as the slow-moving
+%standards process, innovations to the routing architecture have been
+%incremental and difficult to deploy.  Router vendors often add
+%functionality in response to requests for new features (such as
+%route-flap damping or BGP communities).  Moving the routing protocol
+%logic out of the routers to the extent possible would allow protocol
+%designers and network operators to easily experiment with and quickly
+%deploy protocol modifications, without being tied to router hardware
+%and software development cycles.
+
+{\bf Decomposing the routing configuration state across the routers
+unnecessarily complicates policy expression}.  Although
+distributing state to achieve scalability and reliability makes sense,
+many aspects of configuration are not replicated, but rather {\em
+decomposed} across routers.  
+%This decomposition
+%of policy across routers does not improve scalability or reliability,
+%but complicates policy expression and makes configuration
+%inconsistencies more likely.  
+Configuration state should be logically
+centralized because it simplifies policy expression without compromising
+scalability or reliability.
+
+\vspace{0.05in}
+\noindent
+{\em Problem:} Network operators must often implement high-level policies,
+such as preventing routes learned from one AS from being advertised to
+another.  Implementing this policy currently requires modifying the
+configurations of multiple routers: the import policies must ``tag''
+eBGP-learned routes appropriately, and the export policies of other
+routers must filter routes with this tag when advertising to eBGP
+neighbors.  
+
+\vspace{0.05in}
+\noindent
+{\em Solution:} Defining routing policy on a network-wide basis would
+obviate the need for this level of indirection.  A network-wide
+configuration management entity could know the origin of all routes
+based on the eBGP sessions that advertised them, which would allow
+a direct expression of policies based on sessions.
+\vspace{0.05in}
+
+%Because complexity makes reasoning extremely
+%difficult, operators may be less likely to modify configuration because
+%they lack the ability to reason about high-level behavior and fear
+%introducing mistakes into the configuration.
+%Additionally, distributing configuration can introduce
+%unnecessary dependencies that actually make the routing protocol more
+%error-prone than it should be.  
+%This complexity discourages makes operators reluctant to experiment with
+%changes and improvements for fear of introducing unintended side effects
+%or ``fixing something that isn't broken''.  
+%Configuration state should
+%be distributed when doing so enhances scalability or reliability;
+
+{\bf Distributed path selection causes routing decisions at one router
+  to depend on the configuration of other routers}.  Subtle
+  configuration details
+  affect the route that a router selects or whether that router learns a
+  route at all.  Computing routes on a network-wide basis using a
+  consistent view of routing state can reduce interdomain routing's
+  dependencies on these subtle details.
+%selection can both explicitly enforce correct operation and facilitate
+%modeling of the protocol behavior.
+%
+
+\vspace{0.05in}
+\noindent
+{\em Problem:} 
+Omitting a single iBGP
+session in a full-mesh configuration can leave a router with no route
+for certain destinations, even if the intradomain topology is connected.
+Distributed path selection also makes 
+predicting the effects of configuration changes on traffic
+flow difficult~\cite{Feamster2004}. 
+
+\vspace{0.05in}
+\noindent
+{\em Solution:} 
+An entity that performs path assignment on behalf of all
+routers could control path assignment to ensure that every router is
+assigned a route for every destination.
+%For example, consider
+%Figure~\ref{fig:today}, which shows how eBGP, iBGP, and IGP
+%interoperate.  A router that learns a route on an iBGP session will not
+%readvertise that route to routers on other iBGP sessions because those
+%routers should have heard the same route from the router that learned
+%the route via eBGP; if the iBGP topology is configured such that the
+%routers in the top-level of the route reflector are not fully meshed,
+%iBGP may not propagate routes to every router in the AS.
+%(Incorrect iBGP configuration can also cause routing loops and
+%oscillations; we discuss this in Section~\ref{sec:layer}.) 
+\vspace{0.05in}
+
+{\bf Each router is unaware of the state at other routers; this lack of
+  information may result in incorrect or suboptimal routing.}.
+  Implementing BGP's many features on the routers makes these features
+  difficult to reason about.  For example, replication of functionality
+  that is intended to
+  improve reliability can cause forwarding loops, and a feature intended
+  to prevent routing instability can slow convergence.  A routing
+  architecture should implement these features in a 
+  module that has
+  a complete view of the network state, rather than in the routers
+  (each of which only has a partial view of network state); doing so
+  would allow that module to ensure sensible, consistent network-wide
+  route assignment and override any feature interactions that cause
+  incorrect routing. 
+%  Controlling these protocol interactions centrally also makes it much
+%  easier to physically replicate the entity performing route
+%  computation.
+
+%
+% route-flap damping
+\vspace{0.05in}
+\noindent
+{\em Problems:} 
+% MED
+%As another example, BGP's MED attribute allows an AS to express
+%preference for how its neighbor selects an egress point for sending
+%traffic (\ie, ``cold-potato'' routing).  Because MEDs are
+%compared only between routes learned from the same AS, a router cannot
+%form a total ordering of routes, which can cause persistent route
+%oscillation~\cite{Griffin2002}.
+% RR replicas
+A router typically has iBGP sessions to multiple
+route reflectors to improve reliability.  When a route reflector
+fails, protocol oscillation and forwarding loops can arise if the
+second route reflector has a different view of the best routes.
+Placing the two route reflectors close to each other reduces these
+kinds of inconsistencies but introduces fate sharing (\ie, the risk of
+shared failures). 
+%On the other hand, we believe that 
+As another example, BGP route flap damping suppresses
+unstable routes that change frequently~\cite{rfc2439}.  Unfortunately,
+sometimes a 
+single failure can trigger many advertisements that can mistakenly
+activate route flap damping~\cite{Mao2002}.  Network operators must work
+backwards to select configuration parameters that prevent erroneous
+damping.
+
+\vspace{0.05in}
+\noindent
+{\em Solution:} 
+An entity that performs route
+computation using a consistent view of available routes and network
+topology can be replicated using standard distributed 
+systems algorithms. Unlike route reflectors, each replica would assign
+the same route to each router, independently of its location in the
+network.
+A module with knowledge of the routes assigned to every router in the
+AS could also detect when route changes are caused by path exploration and
+avoid unnecessarily suppressing a route.
+
+\vspace{0.05in}
+%Whenever possible, routing-protocol functionality should be decoupled
+%from the routers.  That is there is no fundamental reason why a
+%separate, vendor-independent device could not choose paths on behalf
+%of the routers.  We believe that much of the research community's
+%affection for overlay networks comes from the desire to control
+%Internet routing and the frustration that the IP routing architecture
+%remains largely closed to innovation.  Separating the path-selection
+%process from the routers would enable exactly the kind of
+%experimentation enabled by overlays today, but with the hope of
+%directly influencing the behavior of the {\em underlay\/} network.
+
+%%XXX Mention vendor-specific configuration? XXX
+
+%Allowing each router in the AS to perform path selection introduces a
+%A participant in a dynamic routing protocol updates its path selection
+%as available routes change.
+%If the routing decisions at each router are coupled with
+%the propagation of the routing messages themselves, inconsistent (and
+%incorrect) paths can result as updates propagate.  
+
+\paragraph{Control Routing Protocol Interaction}\label{sec:layer}
+
+Dividing functionality into distinct modules with clear interfaces can
+control complexity.  In the routing system, the {\em IGP\/} computes
+paths between routers in an AS, {\em eBGP\/} computes paths between ASes,
+and {\em iBGP\/} propagates eBGP-learned routes throughout an
+AS.  At a higher 
+layer, {\em overlay networks\/} route traffic along one or more end-host
+hops, abstracting the IP substrate entirely.
+%In this subsection, we argue that the process of network protocol design
+%and operation should respect this layering.
+%
+%As shown in Figure~\ref{fig:today}, an AS's border routers use eBGP to
+%exchange routes for global destinations with other ASes; we call the
+%layer at which eBGP routes are exchanged the {\em eBGP layer}.  Each
+%eBGP-speaking router uses iBGP to exchange routes for global
+%destinations with other routers in its AS.  We will refer to the layer
+%at which iBGP routes are exchanged the {\em iBGP layer}.  If one of
+%these routers selects a route for some destination that it learned from
+%another router via iBGP, it will forward packets for that destination to
+%that other router using the IGP path.  We will refer to the layer at
+%which routers forward packets within an AS as the {\em IGP layer}.
+%
+Unfortunately, the modules in today's
+interdomain routing system interact in the following undesirable ways:
+
+{\bf Hard-wired interactions between eBGP and the IGP constrain an
+operator's control over path selection.}  Although the internal
+topology should have some influence on BGP routing decisions (\eg, 
+it allows nearest-exit routing), a
+router's choice of egress point should be relatively insensitive to
+small IGP changes.
+%, but it should still use IGP
+%information when it informs BGP route selection.
+%% Although the
+%% routing architecture should {\em enable\/} IGP path costs to influence
+%% the BGP routing decision, the interaction between the IGP and eBGP
+%% layers {\em should not be hard-wired\/}.
+%A router may learn multiple routes to a destination over several iBGP 
+%sessions.  That router then applies a {\em de facto}
+%``decision process'' to select a single best route to a destination.
+%One step in that decision process dictates that routes with lower cost
+%IGP paths be preferred over routes with longer IGP paths to an exit
+%point.  
+%The interplay between BGP and IGP limits operator control in two ways:
+%(1)~minor changes in IGP routing can cause disproportionate effects in
+%BGP routing, and (2)~to effect changes in intra-AS routing for network
+%engineering, network operators are often forced to adjust the interdomain
+%protocol configuration.
+%
+%Despite the benefits of hot-potato routing, 
+%This happens because the BGP path selection process introduces
+%dependencies on the IGP, a layering violation.
+
+\vspace{0.05in}
+\noindent
+{\em Problem:} 
+The BGP decision process uses the IGP path cost to break
+the tie between two ``equally good'' routes. Internal events, such as
+link failures, planned maintenance, or traffic engineering often lead to
+changes in the IGP path costs.  These IGP changes can cause a router to
+change its best {\em BGP\/} route, causing abrupt, unwanted traffic
+shifts~\cite{teixeira2004b}.  Additionally, an operator may sometimes {\em
+want\/} to redirect traffic from one egress link to another.  Today,
+this requires complex manipulation of the BGP import policies to make
+some egress points less attractive than others~\cite{Feamster2003e}.
+
+\vspace{0.05in}
+\noindent
+{\em Solution:} 
+With better control over the interactions between eBGP and IGP, an
+operator could directly assign new routes to some routers without changing
+BGP routing policies.
+\vspace{0.05in}
+
+{\bf Inconsistencies between iBGP and IGP can cause
+forwarding loops and route oscillation.}  Operators can test that
+their iBGP configuration satisfies sufficient conditions for
+correctness~\cite{Griffin2002}, but this 
+approach is not robust because operators commonly misconfigure
+iBGP~\cite{Feamster2004h}.  The routing architecture should
+explicitly {\em enforce\/} correctness constraints.  
+
+\vspace{0.05in}
+\noindent
+{\em Problem:}
+An
+iBGP route reflector selects and distributes one best BGP route for each
+destination prefix.  As a result, the route-reflector clients do not
+necessarily make the same BGP routing decisions as they would in a
+full-mesh iBGP configuration.  In particular, a route reflector and
+its clients may have different IGP path costs to the
+egress routers, leading to different BGP routing decisions, as shown 
+previously in Figure~\ref{fig:rr}. 
+%A route reflector and its clients may have a different view of the IGP
+%path costs, which could result in inconsistent paths to the same
+%egress point.
+These inconsistencies can lead to protocol oscillations or persistent
+forwarding loops~\cite{Basu2002,Griffin2002,rfc3345} if a router
+forwards a packet toward one egress point via a router that has
+selected a BGP route with a {\em different} egress point.  These
+``deflections'' can also cause the AS-level forwarding path to differ
+from the BGP AS path, which can complicate debugging~\cite{Mao2003}.
+
+\vspace{0.05in}
+\noindent
+{\em Solution:} 
+Rather than being agnostic about IGP forwarding paths, the routing
+architecture could use the available knowledge to explicitly enforce
+consistency in router-level forwarding paths.
+\vspace{0.05in}
+
+%decision process, can cause persistent route oscillation if route
+%reflectors and their clients are not configured
+%correctly~\cite{Griffin2002b,rfc3345}.  Griffin {\em
+%et al.} observed that iBGP and IGP suffer from {\em asymmetry}, where
+%the path over which data travels (determined by the IGP) is not
+%necessarily the reverse of the control traffic
+%(determined by the iBGP signaling graph)~\cite{Griffin2002}.  Asymmetry
+%between iBGP and IGP can cause loops or ``deflections'' (\ie, instances
+%where the forwarding path does not match the path indicated by the
+%corresponding route), because routers along the IGP
+%path may not agree on the same route to a
+%destination~\cite{Dube99,Griffin2002}. 
+
+%The interactions between iBGP and IGP complicate route selection and
+%router-level forwarding paths. Even if an operator could predict the
+%route that each router selects for a destination, it is still often
+%difficult to determine whether the path over which packets are forwarded
+%will actually follow that route.  For example, although conventional
+%wisdom holds that iBGP route reflection simulates the effects of a full
+%mesh iBGP topology, route reflection does not in fact do this.  A route
+%reflector effectively executes the BGP decision process on behalf of its
+%clients {\em under the assumption that its clients would have selected
+%the same best route}.  Thus, the route that a router selects depends on
+%the configuration of the route reflector hierarchy.  Configuring the
+%route reflector hierarchy to avoid persistent forwarding loops requires
+%extreme care.
+%
+%Although following proposed configuration guidelines can mitigate the
+%undesirable interactions between iBGP and IGP, these work\-arounds
+%avoid the fundamental protocol design problems that must be addressed as
+%part of a long-term solution.  Interactions between iBGP and IGP become
+%more considerably complex as the number of routers in an AS increases.
+%One way of mitigating this complexity is to divide a large AS into
+%multiple smaller ASes (or ``confederations'') with fewer routers.
+%However, each configuration must still use iBGP to propagate routes
+%internally, and the resulting larger network now comprises multiple ASes
+%which are subject to misconfigurations themselves.  Additionally,
+%previous work has derived sufficient conditions that must exist for iBGP
+%to converge to a stable, loop-free routing that correctly propagates
+%routes~\cite{Griffin2002}, but the protocol does not explicitly enforce
+%these conditions.
+%Although this work
+%presents a practical, immediate way to avoid certain iBGP correctness
+%problems, 
+%the sufficient conditions on routing configuration are merely
+%The intra-AS routing protocol should be designed to {\em
+%enforce} these correctness constraints and explicitly prevent unwanted
+%interactions between routing layers.\footnote{Tunneling (expand this)
+%(\eg, via MPLS or IP-in-IP encapsulation) prevents persistent
+%forwarding loops because forwarding decisions within the AS are
+%determined by tunnels, rather than destination-based routing.
+%Essentially, this type of tunneling enforces a layer separation between
+%iBGP and the intra-AS routing. XXX Doesn't solve everything.}
+
+{\bf Interactions between overlay networks and the underlying
+network can degrade performance}.  
+Overlay networks measure end-to-end path performance and tune routing
+at the edge of the network, but they typically lack (1)~detailed {\em
+measurements\/} of traffic and routing that would help them make
+better decisions and (2)~direct {\em control\/} over IP-layer
+protocols and mechanisms. The routing architecture should provide the
+information and control that overlays need via a well-defined
+interface. 
+%
+
+\vspace{0.05in}
+\noindent
+{\em Problem:} 
+Route control products~\cite{www-routescience,www-sockeye}
+help multihomed ISPs select upstream routes for each destination,
+whereas end-host overlays such as RON~\cite{Andersen01} circumvent
+failures and congestion by directing traffic through an intermediate
+host.
+% why are they harmful
+Because they lack complete information about routing and
+traffic-engineering optimizations, these overlays sometimes increase
+congestion and decrease the effectiveness of traffic engineering in the
+underlay network~\cite{Qiu2003}, which can degrade user performance.
+
+\vspace{0.05in}
+\noindent
+{\em Solution:} 
+With more direct control, overlays could operate more efficiently (\eg,
+by not sending the same traffic over congested links at the network
+edge~\cite{Jannotti2002}).  With more information about routing
+dynamics, overlays could
+pre-emptively avoid some outages~\cite{Feamster2003}. 
+
+%% A control overlay, with a node in each AS, could monitor the behavior of
+%% the routing system and drive the selection of paths in the under
+%% network.  With an appropriate interface, this control overlay could
+%% provide invaluable support to conventional overlay networks.
+
+
+%Overlays improve end-to-end path performance and increase routing
+%flexibility, but giving overlays the appropriate interface to the IP
+%layer can improve network performance further.  Rather than creating
+%control loop interactions between overlays and IP routing, the network
+%architecture could provide the overlay with some level of control over
+%the IP layer path to a destination.  Conversely, the IP layer could
+%take ``hints'' from the overlay about end-to-end path performance and
+%incorporate this into path selection at the IP layer.
+
+
+% {\em BGP confederations or separate ASes:} problem still exists in
+%      each confederation or mini-AS (though maybe RRs can be avoided), and
+%      you now have to model a multi-AS network.  (I need to read ``on being
+%      the right size'').
+
+
+
+
+\paragraph{Support Flexible, Expressive Policies}
+
+%% <<<<<<< strawman.tex
+%% When used appropriately, abstraction can mitigate the complexity in
+%% complex systems.  
+
+%% However, the indirection that interdomain routing employs actually
+%% exposes complexity rather than hiding it.  BGP's configuration and
+%% operation involves multiple levels of indirection, but the indirection
+%% it uses serves to complicate the protocol by {\em exposing mechanism},
+%% rather than abstracting these details.  An interdomain routing protocol
+%% should allow operators to specify tasks at the appropriate level of
+%% abstraction, in a way that hides the mechanistic details of the routing
+%% protocol rather than exposing them.  Note that these problems are not
+%% merely configuration problems but involve fundamental protocol design
+%% principles.
+%% =======
+
+%Much of the complexity of interdomain routing comes from the need to
+%support competing domains with complex, sometimes conflicting, policy
+%goals.  In fact, 
+The interdomain routing architecture must support flexible, expressive
+policy.  The need for greater flexibility in selecting and exporting
+routes has driven many of the extensions to BGP over the past fifteen
+years, and we believe this trend is likely to continue.  Although BGP is
+highly configurable, its operation is controlled by {\em indirect\/}
+mechanisms that expose details rather than abstracting them.
+Architectural simplifications and better abstractions can simplify
+configuration languages and make policy specification simpler and more
+expressive.  The following points illustrate why today's routing
+architecture does not satisfy these goals:
+
+%Complex systems often exhibit emergent properties and unintended side
+%effects. For example, a feature that is added for a certain reason may
+%interact with others in strange and unexpected ways.  To control these
+%types of effects, system designers often apply {\em modularity}:
+%dividing the components of a system into groups of components such that
+%each group can be reasoned about independently.  Designers aim to divide
+%a system into modules in a way that minimizes the number of
+%interconnections between modules.  Modules then interact with each other
+%and with the environment via well-defined interfaces.  BGP's design
+%gives rise to feature interactions, unnecessarily exacerbating
+%complexity.  BGP's configuration and operation involves multiple
+%unnecessary levels of indirection, which complicate the protocol by {\em
+%exposing mechanism}, rather than abstracting these details.  In the
+%remainder of this subsection, we describe how BGP's design restricts
+%flexibility and gives rise to complicated feature interactions.
+
+{\bf BGP's mechanisms preclude the expression of certain policies
+and make others difficult to express.}  Network operators influence the
+outcome of the BGP decision process by configuring policies that modify
+the attributes of BGP routes.  Better configuration languages would be
+helpful, but the architecture should also provide more flexible support
+for assigning paths to routers.  
+
+\vspace{0.05in}
+\noindent
+{\em Problem:} 
+Moving
+traffic from one inter-AS link to another requires~\cite{Feamster2003e}:
+(1)~identifying the subset of prefixes that carries the desired amount of
+traffic, (2)~determining how to express that subset (\eg, by a common
+AS path regular expression), (3)~modifying the import policies on one or
+more routers to assign a smaller ``local preference'' for routes
+matching those expressions, and (4)~observing the resulting traffic flow
+and iterating as necessary.  
+
+\vspace{0.05in}
+\noindent
+{\em Solution:} 
+Although ``what if'' tools can help predict
+the effects of policy changes~\cite{Feamster2004}, the routing architecture
+should allow an operator to move traffic by {\em explicitly} assigning paths.
+
+%% Additionally, BGP has a ``hold timer'' setting that
+%% specifies how the router will wait in between BGP ``keepalive'' messages
+%% before deciding that a session has failed.  The hold timer setting is an
+%% indirect mechanism for expressing how fast a router should detect a
+%% failure.  The setting of the hold timer is somewhat of an art: for
+%% example, a short hold timer interval allows for quicker detection of
+%% failed sessions, but the interval must be longer than IGP convergence
+%% delay to prevent spurious session resets.
+
+{\bf BGP's mechanisms impede multiple ASes from cooperating in
+selecting routes that satisfy their goals.}  ASes must cooperate to
+ensure end-to-end reachability, but today's routing architecture does
+not directly support this type of cooperation.  Interdomain routing
+policies are a tussle space~\cite{clark2002}: an AS must balance the
+dependence on its neighbors for good connectivity to the rest of the
+Internet and competition with neighbors for customers and revenue.
+Operators must currently resolve these conflicts outside of the
+infrastructure, but
+the architecture should directly support route
+selection based on negotiated preferences or financial incentives.
+
+\vspace{0.05in}
+\noindent
+{\em Problem:} 
+Suppose one AS wants to advertise a backup route to its
+neighbor.  These two ASes must first negotiate a backup
+``signal'' out of band.  The AS advertising the route must then modify
+its export policies to attach this signal to the backup route, and the
+neighbor must modify the import policies on its routers to lower
+the ``local preference'' value for routes with this community.
+
+\vspace{0.05in}
+\noindent
+{\em Solution:} 
+Because route negotiation is fundamental to inter-AS
+cooperation, the interdomain routing should support it directly. 
+
+%Additionally, an
+%upstream neighbor might have a strong preference for the second route
+%but would not have an easy way to convey this interest.  Although such
+%preferences could be conveyed out of band~\cite{mahajan2005}, each AS
+%would need to reconfigure each router appropriately.
+
+
+%% Finally, {\em router configuration languages dictate low-level
+%% specification of protocol behavior, rather than high-level policy or
+%% operator intent}.  Operators must express constraints on route
+%% distribution using indirect methods of expression.  To do so, they
+%% typically implement filters that control the distribution of routes
+%% based on whether a route's attributes matches specified pattern.  For
+%% example, an operator may configure a router to filter routes that have a
+%% certain ``community'' attribute~\cite{rfc2519}.  Controlling route
+%% propagation using communities involves definitions at three levels of
+%% indirection: (1)~mapping a BGP session to the names of import and export
+%% policies, (2)~mapping the name of each policy to a set of clauses, each
+%% of which defines conditions for accepting or rejecting a route and
+%% modifying route attributes, and (3)~defining various variables that are
+%% used in the clause of a policy statement (\eg, specifying what AS
+%% regular expression number $x$ refers to).  These levels of indirection
+%% make controlling route distribution complicated and error-prone because
+%% they specify {\em how} the protocol should implement a certain behavior,
+%% rather than directly specifying the policy to implement.  A
+%% protocol and configuration language that supported direct expression of
+%% high-level policy would ease the burden of network management.
+%  communities+ACLs for aggregation~\cite{rfc2519}
+%  and imposing relationships like customer, peer, and provider
+
+%An interdomain routing protocol should allow operators to specify tasks
+%at the appropriate level of abstraction, in a way that hides the
+%mechanistic details of the routing protocol rather than exposing them.
+%Note that these problems are not merely configuration problems but
+%involve fundamental protocol design principles.  Better router
+%configuration languages would mitigate some of these problems, but many
+%of the problems associated with this interface result from incorrect
+%{\em protocol} mechanisms.  Thus, allowing operators to configure
+%routers at the appropriate level of abstraction involves architectural
+%changes, as well as improvements to the configuration language itself.
+
+
+
+
+
+

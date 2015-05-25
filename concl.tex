@@ -1,0 +1,767 @@
+
+\qchapter{\textit{Why does everyone talk about the past? All that counts is
+  tomorrow's game.}\vskip 0.1in - Roberto Clemente}{Conclusion}
+\label{chap:concl}
+
+Despite the fact that communication on the Internet relies on correct
+and predictable operation of the routing protocols, today's Internet
+routing infrastructure is surprisingly fragile.  The behavior of
+Internet routing depends heavily on how today's {\em de facto} standard
+Internet routing protocol, BGP, is configured.  Although BGP's
+configuration is precisely what allows operators to realize complex
+economic and policy goals, the resulting ``programmability'' of the
+protocol creates the potential for incorrect and unpredictable behavior.
+This dissertation has presented {\em proactive} techniques for improving
+the correctness and predictability of Internet routing.  In this
+chapter, we briefly review the causes for incorrect and unpredictable
+behavior.  After summarizing the contributions of this dissertation in
+Section~\ref{sec:concl:contrib}, we return in
+Section~\ref{sec:concl:lessons} to the lessons learned 
+from this work (see Section~\ref{sec:lessons}) and
+propose some possible steps forward based on these lessons.
+%Section~\ref{sec:concl:security} 
+%briefly discusses open questions related to Internet routing security
+%(\ie, how to guarantee correct and predictable behavior in the face of
+%adversaries), and 
+Section~\ref{sec:final} concludes.
+
+\section{Reasons for Correctness and Predictability Problems}
+
+Routing on the Internet involves the interaction between tens of
+thousands of independently operated networks, or autonomous systems
+(ASes), each of which may have anywhere from one to hundreds of
+independently configured routers.  Although a network operator
+configures each router independently, the behavior of the protocol may in
+fact depend on the configurations of multiple routers, as well as the
+dependencies between these configurations.  These
+inter-router dependencies make configuring a network of
+routers akin to writing a very large distributed program.  In light of the
+fact that, until now, there have been no tools or techniques to help
+network operators reason about the configuration of the network {\em as
+a whole}, it is not surprising that network operators make mistakes
+configuring their routers.
+
+Even if network operators could be assured that the protocol would
+always behave ``correctly'', they would still have no assurance
+regarding what would actually happen to traffic in response to a
+particular routing configuration.  Various protocol artifacts (\eg, the
+MED attribute and route reflection), as well as the interaction of BGP
+with interior routing protocols make it hard to predict route
+assignments and traffic flow.
+As such, to determine the effects of a potential configuration change on
+the flow of traffic (and, hence, to determine whether such a
+configuration change meets traffic engineering goals), an operator
+currently has no choice but to test that configuration change on a
+running network.  
+
+Additionally, the operation of Internet routing depends on the
+interactions of configurations across multiple administrative domains,
+but network operators typically do not have access to the
+configurations of these neighboring domains.  As a result of this
+opacity, a network operator has no way to guarantee that the policies
+configured in his own network will not conflict with those in
+neighboring networks; worse yet, that operator has no way to debug a
+problem caused by conflicting configurations when one does arise.
+For example, as described in Chapters~\ref{chap:rlogic}
+and~\ref{chap:policy}, ASes with conflicting policies can 
+violate 
+safety: unlike a shortest paths routing protocol, policy-based routing
+protocols may never converge to a stable outcome if the policies in
+neighboring ASes conflict~\cite{Varadhan1996}.  
+
+\section{Summary of Contributions}\label{sec:concl:contrib}
+
+This dissertation posited that the complexity of routing protocol
+configuration is a major 
+impediment to 
+correct and predictable Internet routing and has presented {\em
+proactive} techniques for improving the correctness and
+predictability of Internet routing.  These techniques are based on 
+a rigorous correctness specification for routing, which we presented in
+Chapter~\ref{chap:rlogic}.  This specification has three aspects:
+route validity, path visibility, and safety.  Although we have explored
+the correctness specification in the context of today's Internet routing
+system, we hope that it will prove useful for evaluating the behavior of
+any routing protocol, particularly ones involving complex routing
+policies (\eg, modifications to or replacements for BGP). 
+
+Using this correctness specification as a guide, we have developed tools
+and techniques that allow a network operator to detect problems and
+predict routing protocol behavior {\em before} the configuration is deployed by
+analyzing the static configuration files of the routers within a single
+AS.  In particular, we presented two such tools:
+
+\begin{itemize}
+\itemsep=-1pt
+\item \rcc, presented in Chapter~\ref{chap:rcc}, detects faults in the router
+configurations within a single 
+AS (\ie, violations of route validity, path visibility) by
+analyzing the static configuration files.  \rcc has been downloaded by
+over seventy network operators to date and is available for download at
+\url{http://nms.lcs.mit.edu/rcc/}.
+%
+\item The route prediction algorithms presented in
+Chapter~\ref{chap:sandbox} (and the associated prototype, the {\em routing
+sandbox}) allows an operator to determine which routes each router will
+ultimately select, given only a static snapshot of the router
+configuration and the routes learned via eBGP.  We developed a prototype
+of this tool and determined that our route computation algorithms are
+both accurate and fast enough to be used to compute routes for a large
+tier-1 ISP. 
+\end{itemize}
+
+In addition to providing these tools to help network operators
+configure the Internet routing system, we also derive the constraints
+that each AS's 
+rankings must be subject to in order for the global routing system to
+satisfy safety, presuming that each AS
+retains complete autonomy in how it specifies both rankings and filters
+(Chapter~\ref{chap:policy}). 
+While the constraints we derived could certainly be implemented in \rccns, it
+turns out that they are too restrictive: guaranteeing safety under such
+circumstances essentially requires that each AS constrain its rankings
+to be consistent with shortest paths routing.  We also speculated on the
+implications of these results for the design of future Internet routing
+systems. 
+
+\section{Moving Forward from the Lessons Learned}\label{sec:concl:lessons}
+
+Some researchers have lamented the ``ossification'' of the Internet
+routing system and have argued that it is difficult to have real impact in
+this area~\cite{Peterson2004}.  Indeed, much networking research either
+analyzes the problems with the routing system or proposes solutions that
+work within (or around) the limitations of BGP.  Arguably, the growing
+research interest in overlay networks reflects the community's general
+frustration with the difficulty of effecting real, substantive change in
+the Internet's underlying routing system.  However, fixing the routing
+system is an important and challenging goal that the networking research
+community needs to address.  We believe that there are many open and
+{\em important} problems related to these challenges where networking
+researchers can have impact.
+
+We now revisit the lessons learned (Section~\ref{sec:lessons}) and
+discuss possible steps forward in terms of the two philosophies posed at
+the end of Chapter~\ref{chap:intro}: (1)~leaving the routing infrastructure
+largely unchanged and focusing on tools and techniques to make the
+existing infrastructure more correct and predictable; or (2)~modifying
+the existing architecture and infrastructure so that it is inherently
+more correct and predictable.  In addition to revisiting the lessons
+from Section~\ref{sec:lessons}, in 
+Section~\ref{sec:concl:security}, we consider imminent open problems in
+Internet 
+routing security (\ie, how to guarantee correctness and predictability
+in the face of adversaries).
+
+\subsection{Static configuration analysis detects many faults}
+
+One of the important lessons to take away from our experience with \rcc
+is that static configuration
+analysis detects many faults in deployed routing configurations.  
+Of course, this lesson also begs the question of identifying and
+detecting the types of faults that
+cannot be detected with static analysis alone.  In general, there appear to be many
+classes of events that are of interest to network operators that will
+not be apparent from static analysis alone but can nevertheless exploit 
+static analysis to help network operators drill down on the source of an
+observed problem:
+
+\begin{itemize}
+\itemsep=-1pt
+\item {\bf Shifts in traffic flow.}  Operators can use existing
+monitoring infrastructure and anomaly detection tools to help them
+detect shifts in traffic flow, but identifying the cause of a traffic
+shift typically requires knowledge of many factors, including the
+configuration.  For example, to determine whether a traffic shift was
+caused by a change in demand or a change in routing, an operator may
+want to see how the routes advertised from neighboring ASes have
+changed or determine whether the configuration has changed.
+The techniques described in Chapter~\ref{chap:sandbox} can help determine
+how these changes would likely affect the flow of traffic.
+%
+\item {\bf Contract violations.}  Statically detecting faults in one's own
+network provides no guarantees that neighboring networks will behave
+correctly or scrupulously.  In these cases, dynamic analysis is
+critical, but static 
+analysis also plays a crucial role in helping operators identify
+perpetrators. For example, recent work has developed an algorithm to
+detect inconsistent route advertisements from neighboring
+ASes~\cite{Feamster2004b}; this technique exploits static 
+analysis of import policies to discount cases where an apparent
+inconsistent route advertisement was in fact caused by the AS's own
+import policies.
+%
+\item {\bf Performance degradations.}  While
+static analysis alone cannot detect performance degradations, it can
+help detect (or eliminate) possible causes for these degradations.  For
+example, the checks for path visibility in iBGP (\eg,
+Theorem~\ref{thm:vis}) can help a network 
+operator quickly determine the source of dropped packets and can also
+eliminate some potential causes of the problem.  In the case of routing
+failures that affect end-to-end performance, the fastest way to
+determine that a problem exists in 
+the first place is to observe the end-to-end performance of Internet
+paths, but static analysis may still play a useful diagnostic role in
+many cases.
+
+\item {\bf Route instability.}
+In other cases, such as protocol oscillation cause by interaction between
+MED and route reflectors or by interaction of policies between ASes,
+static analysis is only useful for determining whether a route
+oscillation {\em might} happen.  Careful analysis of the routing
+announcements themselves, in conjunction with analysis of local policies,
+may help determine when such oscillations actually arise and merit
+attention. 
+%
+\item {\bf Security problems.}  Static analysis can help defend against
+some routing security problems (\eg, advertising private address space
+into the public Internet), but detecting route hijacks or otherwise
+invalid route announcements in general is a challenging problem.  
+Real-time analysis and detection of suspicious routing
+announcements will play an important role in Internet routing security.
+%\item {\bf Configuration faults.}
+\end{itemize}
+
+Dynamic analysis may play an important complementary role in solving
+each of these problems, but an important open question is recognizing
+that, for each case, a different ``signal'' may be necessary.  Existing
+work that analyzes traffic patterns for anomalies faces a somewhat less
+challenging problem because the timeseries to analyze is obvious (\ie,
+amount of traffic per unit time).  With routing, the timeseries is less
+obvious.  For example, when is it appropriate to analyze number of
+prefixes advertised per unit time versus the total number of prefixes
+announced by an AS versus the AS path length of a prefix over time, and
+what techniques are most appropriate for analyzing
+these signals?
+
+\subsection{Distributed configuration causes faults}
+
+Because {\em distributed} configuration is responsible for many
+configuration faults, a natural possible step forward is to consider
+ways to configure the network from a single, centralized point.
+Refactoring configuration in this fashion would allow a network operator
+to configure the {\em network}, rather than configuring routers.  This
+proposal seems appealing, but several challenges stand in its way:
+
+\begin{itemize}
+\itemsep=-1pt
+\item What type of language should such a centralized scheme use?  
+\item What types of techniques would network operators be most likely to
+adopt?
+\item How can the expression of high-level policies be separated from
+the low-level mechanisms that implement those policies?
+\end{itemize}
+
+
+Approaches to fault detection fall into two general categories: those
+that take the existing configuration languages as given and analyze
+deployed configuration for faults (analysis), and those that try to
+design higher-level constructs to automatically generate low-level
+router configuration (synthesis).  Both approaches can benefit
+from better configuration languages that more closely correspond to the
+network operator's intent.  For example, analysis techniques could
+greatly benefit if they could check the actual routing configuration
+against a specification of the intended behavior of the routing
+protocol.  Such a specification could serve as a high-level language for
+automatically {\em generating} low-level configuration.
+
+Most network operators are trained on existing configuration languages,
+and learning a new process for configuring routers has a high cost.
+This situation suggests that the best way to spur adoption would be to
+design a configuration language that allows an operator to more easily
+construct configuration fragments from templates, which could be
+customized according to higher-level macros.
+
+In some sense, these two questions are closely related: network
+operators will most likely be willing to adopt a configuration language
+that is similar to the ones they use today.  In light of this
+propensity, one possible approach is to generate a system that gives an
+operator the semblance of configuring each independent router but is, in
+reality, a centralized system that is responsible for pushing
+configuration to the routers but can automatically check for invariants
+that must hold network-wide.  Such a system is actually not that
+different from the \rcc paradigm: the main difference is that the
+network would be checked {\em before} it is deployed on running routers
+and the operator would alter configurations in a centralized repository,
+rather than on the individual routers.  Once configuration were
+centralized in this fashion, however, the system could recognize
+commonalities (``design patterns'') that existed across various routers
+and BGP sessions and assist an operator in automatically generating
+these common configurations. 
+
+
+
+\subsection{Safety + Autonomy $\Rightarrow$ Tight restrictions on
+expressiveness}
+
+Our results concerning safety in Chapter~\ref{chap:policy} suggest that,
+if ASes are given both complete freedom to establish business contracts
+(\ie, set filters) and complete autonomy (both reasonably design
+requirements for the foreseeable future), then the only Internet routing
+protocol that is guaranteed to converge on a fast timescale is one where
+paths are ranked according to consistent path costs (\eg, shortest path
+routing).  
+
+This result suggests that, moving forward, future Internet routing
+protocols should either: (1)~constrain rankings so that they are derived
+from consistent path costs but still provide operators the
+latitude they need to implement business relationships; (2)~relax
+autonomy, designing the protocol in such a way that reveals the fact
+that a policy conflict exists without divulging sensitive information;
+or (3)~devise more reasonable constraints on filtering that might
+permit more flexible rankings.
+%
+In any case, it is clear that the Internet routing protocol must
+both converge on a fast timescale, for reasons of both performance and
+diagnostics, and somehow make it possible for ASes to express
+preferences over the next-hop AS to which they send traffic (and make it
+possible to recognize whether such rankings conflict).
+%
+
+The work in this dissertation examines one end of this spectrum: that
+is, we explore how expressiveness can rankings be, providing for
+unlimited autonomy 
+and unrestricted filters.  Our results suggest that, in this regime,
+ASes have relatively little expressiveness over rankings, which implies
+that exploring how to relax requirements such as autonomy may be
+worthwhile.  In Section~\ref{sec:policy:conclusion}, we discussed
+possible several future directions.  We now revisit the strawman
+proposal for a new routing protocol that we proposed in
+Section~\ref{sec:policy:implications} and pose some open questions
+related to this proposal. 
+
+Suppose that every edge in the inter-AS graph had a corresponding
+weight, that the cost of a path was the sum of all inter-AS edge weights
+from source to destination, and that each AS was required to prefer the
+path with lowest path cost.  To give operators some
+latitude in setting rankings, further suppose that each AS had the
+freedom to set the edge weights for only those edges that were incident
+to its own AS in the graph (\ie, those edges from it to the next-hop AS
+towards the destination).   Now, we know that such a protocol is
+guaranteed to converge on a fast timescale, because all rankings are based
+on shortest paths routing.  On the other hand, this strawman proposal
+introduces two obvious problems:
+
+\begin{itemize}
+\itemsep=-1pt
+\item {\bf Potentially poor isolation.} When an inter-AS edge fails, an
+operator might 
+have to re-tune the weights on the edges incident to his AS to guarantee
+that traffic will continue flowing through the chosen next-hop AS for
+that destination.  Is it possible to either design a scheme that
+automatically tunes these weights for the operator and is still
+guaranteed to be stable or, alternatively, a way of setting edge weights
+that is relatively robust to these types of failures?
+\item {\bf Policy disputes.} This strawman proposal does not eliminate
+policy disputes entirely; rather, it {\em moves} the policy disputes so
+that the protocol oscillates on a slower timescale.  Of course, there is
+another advantage to this 
+slower-timescale oscillation, in that the policy dispute will be
+apparent from the continually increasing path costs.  Can the Internet
+routing infrastructure incorporate a protocol that automatically detects
+these disputes and facilitates renegotiation of business relationships
+to resolve them?
+\end{itemize}
+
+
+
+\subsection{Protocol design should consider correctness and
+predictability}\label{sec:rcp} 
+
+
+This dissertation focuses on techniques for improving correctness and
+predictability within the current Internet routing architecture, but a
+more fruitful approach in the long term is to design the routing
+protocol or architecture with an eye towards
+preventing incorrect and unpredictable behavior in the first place.
+The routing architecture should be designed to explicitly
+provide correct and predictable behavior. Correctness and predictability
+should not depend on the routing protocol's configuration; rather, they
+should be {\em intrinsic} to the protocol's design.
+
+
+\subsubsection{Separate routing from forwarding}
+
+
+Our work on detecting faults in router configuration suggests that many
+router configuration faults result from distributed nature of the
+configuration.  The configuration of some policies introduces
+dependencies between the configurations of multiple routers: the correct
+operation of a filter on one router may be based on a label that a
+different router attaches to the route.  
+%
+Additionally, many of the problems with BGP's correctness and
+predictability result from today's techniques for disseminating routes
+within an AS (\ie, iBGP route reflection).  Existing techniques for
+disseminating BGP routes were designed as scalable, easily deployable
+extensions to BGP, but did not consider correctness or predictability as
+first-order concerns.  Route reflectors~\cite{rfc2796} eliminate the
+need for a full mesh between iBGP speakers, but they do not correctly
+emulate a full mesh iBGP configuration and, as a result, may cause the
+protocol to violate basic correctness properties, as described in
+Chapter~\ref{chap:rlogic}.  
+After first surveying some techniques that make minor modifications to
+iBGP to improve correctness and predictability, we explore how more
+radical modifications to iBGP---specifically, those that separate Internet 
+routing from the individual routers---might help network operators and
+protocol designers cope with the complexity of Internet routing's
+techniques for achieving policy and scalability.
+
+Previous work has suggested making small modifications to the way that
+route reflectors advertise routes to guarantee various correctness
+properties.  RFC 1863 proposed that route servers forward {\em all\/}
+routes to clients, rather than just a single best
+route~\cite{rfc1863} and suggested using an ``advertiser''
+attribute to allow recipients to know who advertised the routes.  Basu
+\ea proposed a small modification to guarantee safety: instead
+of having route reflectors only a single route to their clients, this
+work proposes that route reflectors
+should advertise all routes that are equally good up to the MED step in
+the selection process (Table~\ref{tab:background:decision},
+Chapter~\ref{chap:related})~\cite{Basu2002}.  In
+Chapter~\ref{chap:rlogic} (Section~\ref{sec:mesh}), we also note that a
+similar modification 
+would also guarantee route validity.  Work on
+BGP scalable transport (BST) has proposed other changes to iBGP that prevent
+oscillations~\cite{Jacobson2003}.  Unfortunately, because these
+proposals require modifying BGP (which implies either convincing router
+vendors to implement the change, effecting the change through a standards
+body such as the Internet Engineering Task Force, or both), they have
+not been widely adopted.
+
+\begin{figure}
+\centering
+\subfigure[In a conventional iBGP topology, every router in the AS
+participates in IGP and iBGP and selects routes independently.]{
+\epsfig{file=figures/pre_rcp.eps, width=0.45\linewidth}}\hfill
+\subfigure[RCP receives the iBGP routes and the IGP topology from the
+routers in the AS and computes routes on behalf of every router in the
+AS, and assigns those routes using
+iBGP~\cite{feamster:fdna2004}.]{ 
+\epsfig{file=figures/rcp.eps, width=0.45\linewidth}}
+\caption[Overview of Routing Control Platform]{Overview of the Routing
+Control Platform (RCP) architecture.}
+\label{fig:rcp}
+\end{figure}
+
+Rather than modifying the deployed routing infrastructure, the functions
+of Internet routing could reside in a separate system that gathers
+information about the topology (\eg, via iBGP and IGP), computes the
+route that each router should use on behalf of each router, and assigns
+the appropriate route to each router.  The idea of having a control
+system that is separate from the infrastructure that is responsible for
+forwarding packets (\ie, the routers) is the central idea of the 
+Routing Control Platform (RCP)~\cite{caesar2004,feamster:fdna2004}
+(see Figure~\ref{fig:rcp}), as well as work on a ``more versatile
+route reflector'' that computes different routing decisions on behalf of
+its client routers~\cite{id-versatile-rr}.  The IETF ForCES working
+group has also proposed a framework that separates an individual
+network element into separate control and forwarding elements, which can
+communicate over a variety of media (\eg, a backplane, Ethernet,
+etc.)~\cite{forces-wg}.  The framework dictates that routing protocols
+be implemented in the control elements~\cite{rfc3746}.
+
+Because RCP has a view of the AS-wide iBGP and IGP topologies, it can
+assign routes to each router in a way that guarantees that the routing
+protocol satisfies various properties, such as those from the
+correctness specification in Chapter~\ref{chap:rlogic}.  RCP may also
+simplify routing configuration, because configuration can be done on an
+AS-wide basis, rather than router-by-router.  Rather than implementing
+these policies with specifications of mechanism that are distributed
+across the routers themselves, RCP could allow an operator to specify a
+policy {\em for the entire AS} and be agnostic to the mechanisms that
+actually implement the policy on the routers themselves.  
+
+Separating routing state from the routers can potentially introduce
+additional robustness, scalability, speed, and consistency problems.  The RCP
+architecture must address these challenges to be viable.  We have implemented
+a preliminary prototype of RCP as an 
+extension to Quagga~\cite{www-quagga} to examine the feasibility of
+having RCP control route selection for all of the routers in a large
+tier-1 ISP~\cite{caesar2004}.  To study the other feasibility issues, we
+are presently implementing RCP as extensions to the XORP software
+router~\cite{Handley2002}; we plan to make this prototype available to
+the research community.
+
+%\section{Preventing Faults in the First Place}\label{sec:rcp}
+%
+%\input{rcp/introduction}
+%\input{rcp/strawman}
+%\input{rcp/architecture}
+%\input{rcp/weaknesses}
+%\input{rcp/related}
+
+Ultimately, RCP can facilitate innovation because it allows the logic of
+route selection to be located in a system that is separate from the
+infrastructure that is responsible for forwarding data traffic.  Moving
+routing into a logically centralized (albeit replicated) system creates
+more flexibility in how routes are exchanged between RCP nodes in
+neighboring ASes: RCP nodes in adjacent ASes could use BGP to exchange
+these routes, 
+although they could conceivably use any protocol.  RCP could also expose
+more information about the routing topology to applications such as
+overlay networks, as well as give these networks more control over the
+IP-level routes that are actually used.
+
+Moving routing functionality into a system like RCP is not the only way
+to separate routing from forwarding: others have advocated removing
+routing from the AS entirely by moving routing complexity to end hosts,
+which query route servers to discover routes~\cite{Lakshminarayanan2004,
+Yang2003}.  Although these projects share our goal of separating routing
+complexity from the infrastructure, RCP has the added benefit of
+simplifying intra-AS routing.  Recent work has also proposed working
+around the existing infrastructure, using an overlay to improve BGP's
+robustness~\cite{Agarwal2003, Goodell2003}.
+
+
+\subsubsection{Provide direct control over traffic}
+
+Much research, both in Chapter~\ref{chap:sandbox} and in previous
+work~\cite{Feldmann2000}, has focused on developing predictive models of
+network-wide routing, typically to assist network operators in traffic
+engineering. A system like RCP can provide {\em real-time control\/} of
+BGP routes rather than modeling the BGP routes in today's routing
+system.  That is, rather than trying to infer the outcome of BGP route
+selection or otherwise monitor the routing protocol (as many existing
+systems do~\cite{www-ipsumnetworks,www-packetdesign, Shaikh2004}), RCP
+can {\em control} the outcome, thus directly controlling how traffic
+flows.
+
+Although RCP provides direct control over traffic, it does not provide
+any facilities for helping operators determine {\em how} that traffic
+should be controlled.  Similarly, Chapter~\ref{chap:sandbox} presented
+algorithms that help network operators predict the effects of
+configuration changes on the flow of traffic through the network, but
+these algorithms do not help network operators actually discover a
+routing configuration that achieves their intended objective (\eg,
+relieving persistent congestion, minimizing congestion on peering links,
+etc.).  Unlike {\em intra}domain routing optimization, for which there
+are existing tools and algorithms to help operators tune
+parameters~\cite{www-cariden-mate,Feldmann2000}, {\em inter}domain routing is
+much more difficult to optimize: the search space is much larger, and
+local configuration changes can have global effects that alter the
+traffic volumes coming {\em to} that AS from neighboring ASes.  Our
+previous work proposes some guidelines for helping network operators
+make configuration changes that are less likely to cause unpredictable
+effects~\cite{Feamster2003e}, but the design techniques for efficiently finding
+optimal (or even ``good'') configuration settings remain open.
+
+
+\subsubsection{Avoid manipulable routing objects}
+
+Recall from Chapter~\ref{chap:rlogic} that we considered a destination
+$d$ to be an immutable ``handle'' for a route that referred to a set of
+endpoints; we cited IP prefixes as the destination $d$ in
+the case of Internet routing.  Unfortunately, prefixes are {\em not}
+immutable: a router in one AS can {\em aggregate} IP prefixes that are
+contiguous in 
+the address space taking two routes, $(d_1 \rightarrow v_i)$ and $(d_2
+\rightarrow v_j)$ and combining them into a single route, $(d
+\rightarrow v_k)$, such that any packets destined for endpoints in
+either $d_1$ or 
+$d_2$ will be forwarded according to the route $(d\rightarrow v_k)$.
+This creates complications for the definition of an induced path
+(Definition~\ref{defn:ipath}), since a route to any endpoint by be
+induced by routes for different destination handles at different
+routers.
+
+\begin{figure}
+\centering\epsfig{file=figures/aggregate.eps, width=0.65\linewidth}
+\caption[How aggregation can interfere with an AS's attempt to control
+  inbound traffic.]{Aggregation can interfere with an AS's attempt to
+  control inbound traffic.  In this example, AS~1 announces more
+  specific routes to AS~3 in an attempt to have inbound traffic enter
+  via that AS.  AS~3, on the other hand may aggregate (or simply filter)
+  those more specific routes to save routing table space, thus
+  interfering with AS~1's intent.}
+\label{fig:aggregate}
+\end{figure}
+
+Not only do these manipulable routing objects create problems for reasoning
+about properties of the routing protocol, but they also create practical
+problems.  For one, they create a tension between control over inbound
+traffic and scalability.  ASes typically exploit the fact that routers
+will forward traffic based on the longest matching IP prefix in the routing
+table and send more specific routing information along links where it
+wishes to attract traffic.  This technique allows an AS to control how
+traffic reaches its AS from 
+other places on the Internet.  On the other hand, to control routing
+table size, some ASes may combine multiple more specific routes into a
+single shorter route using a process called aggregation.  Aggregation
+dramatically reduces routing table size because Internet addressing is
+typically hierarchical.  Unfortunately, aggregating more specific
+prefixes can also interfere with an ASes attempt to control how traffic
+reaches its network, as shown in
+Figure~\ref{fig:aggregate}~\cite{id-path-validation}.  Thus, ASes must
+either aggregate routes at the risk of interfering with the traffic
+engineering goals of other ASes (the common practice
+today~\cite{nanog-prefix-aggregation}) or maintain larger routing tables
+without receiving compensation for the incurring the extra overhead.
+
+Finally, recent work has observed that, because IP prefixes can be
+manipulated by routers in other ASes, they often do not accurately
+reflect a set of destinations 
+that is atomically either reachable or
+unreachable~\cite{Freedman2005}. This characteristic can cause
+violations of route validity (Definition~\ref{defn:rv}) when a portion
+of endpoints contained within some destination become unreachable but
+the route advertising the IP prefix for those endpoints is not
+withdrawn.
+
+In light of these problems presented by aggregation, one reasonable
+design principle for future Internet routing systems may be to make the
+destination that is referred to by a route an 
+immutable property of the route, as a recent proposal has
+suggested~\cite{Vutukuru2005b}. 
+
+%% Even if a router makes the same routing decision for two contiguous
+%% prefixes, it typically cannot aggregate those routes because it does not
+%% know if other routers that learn BGP routes from this router might
+%% select different routes for the separate prefixes.  
+
+%% AIP as possible answer?
+
+
+
+
+
+
+
+
+\subsection{Consider the effects of adversaries on correctness
+and predictability}
+\label{sec:concl:security}
+
+This dissertation addresses the challenges for correctness and
+predictability that are introduced unintentionally.  A growing threat to
+the Internet routing infrastructure, however, is that posed by
+adversaries.  For example, malicious parties may attempt to inject false
+routing information in an attempt to divert or blackhole traffic.
+Routing security has been studied in some detail~\cite{perlman88}, but
+{\em interdomain} routing security is particularly difficult because
+interdomain routing must support complex policy.  In addition to
+securing routing information, the infrastructure should also ultimately
+provide guarantees about where the traffic actually goes---in other
+words, whether the {\em induced path} (Definition~\ref{defn:ipath},
+Chapter~\ref{chap:rlogic}) actually corresponds to the information about
+the path that is carried in the route.
+
+
+\subsubsection{Control-Plane Security}
+
+Attacks against the control plane have received considerable attention
+in recent years.  The IETF has established a working group in routing
+protocol security, RPSEC~\cite{rpsec-wg}; recent drafts have addressed
+threats to the Internet routing system and BGP and outlined security
+requirements~\cite{id-routing-threats}.  BGP does not provide any
+support for controlling route announcements.  Securing the control plane
+boils down to two tasks: {\em origin authentication}, which verifies
+that the AS that is announcing (``originating'') the prefix actually has
+legitimate ownership over the address space for that prefix; and {\em
+path authentication}, which verifies that the sequence of ASes that the
+routing advertisement traversed corresponds to the sequence of ASes in
+the AS path.
+
+Various proposals provide either origin authentication~\cite{id-sobgp},
+path authentication~\cite{Hu2004:spv}, or both~\cite{kent2000b}.
+Unfortunately, these schemes require the existence of a public
+key infrastructure (PKI), a central authority that manages key
+distribution, ownership, and revocation; PKIs are cumbersome and
+difficult to 
+maintain.  Thus, developing a routing protocol that automatically
+verifies the ownership of some address space without requiring a
+centralized, trusted verification or lookup infrastructure remains an
+important unsolved problem.
+
+Even an Internet routing architecture that provides both origin and path
+authentication still does not enable an AS to verify that the route it
+receives is one that it {\em should be receiving}.  That is, while they
+allow an AS to verify that a route announcement traversed a particular
+sequence of ASes, they do not provide any mechanism to allow an AS to
+verify that the sequence of ASes is one that is sensible.  Answering
+this question is critical for routing security.  If an AS has no way to
+determine whether a sequence of ASes is sensible, then it is possible
+for a single malicious organization to establish a new AS and have that
+AS buy transit from the upstream AS of a source and destination,
+respectively.  An important unsolved problem involves characterizing the
+types of bogus routes that an AS can detect with the limited information
+available today, as well as determining the additional information that
+should be added to the routing protocol that could assist this detection
+without 
+revealing sensitive business relationships.
+
+
+\subsubsection{Data-Plane Security}
+
+Even if an AS could verify that the routes it receives were authentic
+and policy-compliant, it still has no way to verify that packets
+actually traverse the same ASes as those in the route's AS
+path~\cite{Mao2003}.  We note that the AS path was never intended as an
+indication of the ASes that traffic will actually traverse.  Rather, the
+AS path was only
+ever intended for loop detection (\ie, so that an AS would not
+readvertise a route that it had already learned) and as a coarse metric
+for choosing shorter routes over longer ones.  Nevertheless, providing
+some guarantees over where traffic will (or won't) travel appears to be
+a desirable goal for Internet routing.  Allowing an AS or end host to
+verify that a route's AS path matches the actual forwarding path, or,
+more generally, allowing it to ascertain the sequence of ASes that
+traffic to or from some destination traverses are important capabilities
+that any future Internet routing system should provide.  
+
+%% While restricting route propagation is a reasonable way to restrict
+%% unwanted traffic, a malicious entity can always try to ``dump'' traffic
+%% for a certain destination on any advertised link, in the hope that the
+%% router will carry traffic to that destination anyway.  A router should
+%% reject packets destined for hosts with no corresponding advertised
+%% route.  More generally, a router should reject packets from sources that
+%% should not have a valid route through this router to the destination.
+%% Deploying packet filters only at routers in large ASes in the Internet
+%% ``core'' could eliminate most of these packets~\cite{Park2001}, but an
+%% AS must be able to construct these filters in the first place, which
+%% would require discovering the routes from the source to that AS.
+%% \begin{itemize}
+%% \itemsep=-1pt
+%% \item {\em Dynamic packet filter construction.} How can an AS
+%%   determine the source and destination addresses it
+%%   should see on packets arriving on a link?~\footnote{This
+%%   question has a dual for {\em route\/} filters in the 
+%%   control plane.} 
+%% \end{itemize}
+
+
+\section{Concluding Remarks}\label{sec:final}
+
+%% Muse about how awesome the correctness specification is and how it can
+%% be used to analyze all of these cool new features and additions.  Now,
+%% it's just our job to come up with those features!
+
+This dissertation has (1)~presented a correctness specification for
+Internet routing; (2)~developed tools and techniques to check for
+violations of this correctness specification in real-world routing
+configuration; (3)~exploited the correctness specification to design
+algorithms that predict the outcome of BGP route selection for the set
+of routers within an AS; and (4)~derived the first conditions for
+guaranteeing a {\em global} correctness property, safety, that do not
+require global knowledge of business relationships or topology.  
+
+The current version of the Internet's routing protocol, BGP, has been
+deployed for nearly a decade and has been modified and extended numerous
+times (\eg, with route reflection).  More striking is the plethora of
+proposals that have not been deployed.  In light of these proposals, the
+key challenge is to be able to separate the good protocol modifications
+from the bad ones and to determine how these various modifications
+interact with each other. 
+The correctness specification presented in this dissertation facilitates
+this type of reasoning. Furthermore, the proactive techniques that this
+dissertation has advocated and developed can help resolve the tension
+between flexibility and complexity that exists in any complex routing
+protocol. 
+%proposed routing 
+%protocol (or even a modification to BGP, for that matter) will solve the
+%problems it claims to solve without introducing new problems of its own.
+While we have presented the properties of the correctness specification
+in the context of BGP, it is our hope that this specification can serve
+as a guide for both evaluating and designing new routing protocols that
+explicitly provide correctness and predictability. 
+
+

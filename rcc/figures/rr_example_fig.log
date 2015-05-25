@@ -1,0 +1,181 @@
+This is TeX, Version 3.14159 (Web2C 7.4.5) (format=latex 2004.3.25)  31 MAR 2005 17:59
+**rr_example_fig.tex
+(./rr_example_fig.tex
+LaTeX2e <2001/06/01>
+Babel <v3.7h> and hyphenation patterns for american, french, german, ngerman, n
+ohyphenation, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2001/04/21 v1.4e Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size10.clo
+File: size10.clo 2001/04/21 v1.4e Standard LaTeX file (size option)
+)
+\c@part=\count79
+\c@section=\count80
+\c@subsection=\count81
+\c@subsubsection=\count82
+\c@paragraph=\count83
+\c@subparagraph=\count84
+\c@figure=\count85
+\c@table=\count86
+\abovecaptionskip=\skip41
+\belowcaptionskip=\skip42
+\bibindent=\dimen102
+)
+(/usr/share/texmf/tex/latex/pstricks/pst-all.sty
+Package: pst-all 1997/03/25 all pstricks tools
+
+(/usr/share/texmf/tex/latex/graphics/pstcol.sty
+Package: pstcol 2001/06/20 v1.1 PSTricks color colompatibility (DPC)
+
+(/usr/share/texmf/tex/latex/pstricks/pstricks.sty
+Package: pstricks 1997/03/25 package wrapper for PSTricks pstricks.tex
+
+(/usr/share/texmf/tex/generic/pstricks/pstricks.tex
+`PSTricks' v97 patch 14  <1999/12/23> (tvz)
+\pst@dima=\dimen103
+\pst@dimb=\dimen104
+\pst@dimc=\dimen105
+\pst@dimd=\dimen106
+\pst@dimg=\dimen107
+\pst@dimh=\dimen108
+\pst@hbox=\box26
+\pst@boxg=\box27
+\pst@cnta=\count87
+\pst@cntb=\count88
+\pst@cntc=\count89
+\pst@cntd=\count90
+\pst@cntg=\count91
+\pst@cnth=\count92
+\pst@toks=\toks14
+(/usr/share/texmf/tex/generic/pstricks/pstricks.con)
+\psunit=\dimen109
+\psxunit=\dimen110
+\psyunit=\dimen111
+\pslinewidth=\dimen112
+\pst@customdefs=\toks15
+\pslinearc=\dimen113
+\everypsbox=\toks16
+\psframesep=\dimen114
+\pslabelsep=\dimen115
+\theoverlaybox=\box28
+))
+(/usr/share/texmf/tex/latex/graphics/color.sty
+Package: color 1999/02/16 v1.0i Standard LaTeX Color (DPC)
+
+(/usr/share/texmf/tex/latex/config/color.cfg
+File: color.cfg 2001/08/31 v1.1 color configuration of teTeX/TeXLive
+)
+Package color Info: Driver file: dvips.def on input line 125.
+
+(/usr/share/texmf/tex/latex/graphics/dvips.def
+File: dvips.def 1999/02/16 v3.0i Driver-dependant file (DPC,SPQR)
+)
+(/usr/share/texmf/tex/latex/graphics/dvipsnam.def
+File: dvipsnam.def 1999/02/16 v3.0i Driver-dependant file (DPC,SPQR)
+)))
+(/usr/share/texmf/tex/latex/pstricks/pst-grad.sty
+Package: pst-grad 1997/03/25 package wrapper for PSTricks pst-grad.tex
+
+(/usr/share/texmf/tex/generic/pstricks/pst-grad.tex  v97 patch 1, 1997/04/28
+Package color Info: Redefining color gradbegin on input line 45.
+Package color Info: Redefining color gradend on input line 49.
+))
+(/usr/share/texmf/tex/latex/pstricks/pst-plot.sty
+Package: pst-plot 1997/03/25 package wrapper for PSTricks pst-plot.tex
+
+(/usr/share/texmf/tex/generic/pstricks/pst-plot.tex  v97 patch 2, 1999/12/12
+(/usr/share/texmf/tex/generic/multido/multido.tex  v1.4, 93/01/14 <tvz>
+\multido@count=\count93
+\multidocount=\count94
+\multido@stuff=\toks17
+)))
+(/usr/share/texmf/tex/latex/pstricks/pst-coil.sty
+Package: pst-coil 1997/03/25 package wrapper for PSTricks pst-coil.tex
+
+(/usr/share/texmf/tex/generic/pstricks/pst-coil.tex  v97 patch 2, 1998/03/19))
+(/usr/share/texmf/tex/latex/pstricks/pst-text.sty
+Package: pst-text 1997/03/25 package wrapper for PSTricks pst-text.tex
+
+(/usr/share/texmf/tex/generic/pstricks/pst-text.tex  v97, 1997/03/25))
+(/usr/share/texmf/tex/latex/pstricks/pst-char.sty
+Package: pst-char 1997/03/25 package wrapper for PSTricks pst-char.tex
+
+(/usr/share/texmf/tex/generic/pstricks/pst-char.tex  v97 patch 3, 1999/03/11))
+(/usr/share/texmf/tex/latex/pstricks/pst-node.sty
+Package: pst-node 1997/03/25 package wrapper for PSTricks pst-node.tex
+
+(/usr/share/texmf/tex/generic/pstricks/pst-node.tex  v97 patch 11, 2000/11/09
+\psrow=\count95
+\pscol=\count96
+\psmatrixcnt=\count97
+\psrowsep=\skip43
+\pscolsep=\skip44
+)) (/usr/share/texmf/tex/latex/pstricks/pst-3d.sty
+Package: pst-3d 1997/03/25 package wrapper for PSTricks pst-3d.tex
+
+(/usr/share/texmf/tex/generic/pstricks/pst-3d.tex  v97, 1997/03/25))
+(/usr/share/texmf/tex/latex/pstricks/pst-eps.sty
+Package: pst-eps 1997/03/25 package wrapper for PSTricks pst-eps.tex
+
+(/usr/share/texmf/tex/generic/pstricks/pst-eps.tex  v97 patch 1, 1997/05/05
+\pst@epsout=\write3
+\pst@tempout=\write4
+))
+(/usr/share/texmf/tex/latex/pstricks/pst-fill.sty
+Package: pst-fill 1997/04/08 package wrapper for PSTricks pst-fill package
+
+(/usr/share/texmf/tex/generic/pstricks/pst-fill.tex  v97 patch 2, 1997/12/12
+\pst@fillbox=\box29
+))
+(/usr/share/texmf/tex/latex/pstricks/pst-tree.sty
+Package: pst-tree 1997/03/25 package wrapper for PSTricks pst-tree.tex
+
+(/usr/share/texmf/tex/generic/pstricks/pst-tree.tex  v97 patch 5, 1999/10/28
+\pstree@rootbox=\box30
+\pstree@box=\box31
+\psnodecnt=\count98
+\pstreelevel=\count99
+\pstreecnt=\count100
+\pstree@cnt=\count101
+\pstree@stop=\count102
+))
+(/usr/share/texmf/tex/generic/multido/multido.sty
+Package: multido 1997/03/25 package wrapper for multido.tex
+
+(/usr/share/texmf/tex/generic/multido/multido.tex  v1.4, 93/01/14 <tvz>)))
+(./rr_example_fig.aux)
+\openout1 = `rr_example_fig.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <7> on input line 11.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5> on input line 11.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <9> on input line 25.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <6> on input line 25.
+ [1
+
+] (./rr_example_fig.aux) ) 
+Here is how much of TeX's memory you used:
+ 2319 strings out of 95847
+ 28612 string characters out of 1193874
+ 93342 words of memory out of 1000001
+ 5241 multiletter control sequences out of 10000+50000
+ 5463 words of font info for 20 fonts, out of 500000 for 1000
+ 14 hyphenation exceptions out of 1000
+ 30i,5n,21p,231b,219s stack positions out of 1500i,500n,5000p,200000b,5000s
+
+Output written on rr_example_fig.dvi (1 page, 5596 bytes).

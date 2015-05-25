@@ -1,0 +1,236 @@
+\section{Implementation}
+\label{sec:sandbox_implementation}
+
+In this section, we describe a prototype that
+incorporates the model of BGP path selection described in this chapter.
+Our current prototype separates the computation of egress routers for a
+given destination from the assignment of other routers to those egress
+routers.   {\em This separation of functionality requires that $b_r \in
+\gamma(E)$, which does not hold when {\em both} MED and route reflection are
+used (as shown in Section~\ref{sec:rr_med}).}  We refer readers to our
+previous work, which discusses the design, implementation, and evaluation
+of the prototype implementation in more detail~\cite{Feamster2004}. 
+
+\subsection{Design Overview}
+
+We now highlight the high-level design of the prototype, shown in
+Figure~\ref{fig:dataflow}.  We 
+briefly describe: the necessary inputs for driving the prototype, the
+decomposition of functionality into three distinct modules and the
+relationships of those modules to the algorithms described in this
+chapter, and optimizations that reduce computational complexity.
+
+\begin{figure}[h!]
+\centering \epsfig{file=sandbox/figures/prototype_fig.eps, width=\linewidth}
+\caption[Data flow in the prototype.]{Data flow in the prototype.  Fonts
+  specify {\emc raw 
+  inputs}, {\mfc input tables}, and {\dfc derived tables}.  In
+  practice, operators might 
+  collect raw inputs once a day.}
+\label{fig:dataflow}
+\end{figure}
+
+
+\subsubsection{Input data}
+The prototype uses three inputs:
+
+\begin{itemize}
+\item {\em BGP routing tables:}
+The BGP tables for the eBGP-speaking routers provide the first stage of the
+algorithm with a snapshot of the routes advertised by neighboring
+ASes.  We ignore the router's current view of the best route and the
+current setting of the local preference attribute, since these relate
+to the existing network configuration rather than the scenarios we
+might want to emulate.
+
+\item {\em Router configuration files:} 
+The configuration files are used to (1)~determine the import policies
+(\ie, route maps) for each eBGP session, (2)~determine the iBGP
+signaling graph, and (3)~compute the IGP path costs between each pair
+of routers.  The import policies are used to manipulate attributes of
+the eBGP routes in the first stage of the algorithm, and the iBGP and IGP
+information are needed for the third stage.
+
+\item {\em BGP neighbor information:}
+Because the BGP decision process depends on the router ID associated
+with the BGP session announcing the route, our algorithms require
+knowing the router ID associated with each BGP session.  The second
+stage uses the router IDs of the {\em eBGP\/} sessions, while the
+third stage uses the router IDs for the {\em iBGP\/} sessions.
+\end{itemize}
+
+
+
+\noindent
+We emphasize several points with regard to the input data.  First, a
+network operator can capture all of the necessary data with telnet or
+ssh access to each router.  Second, many aspects of the input data
+do not change very often; as such, the prototype is
+useful even if all of the input data is collected infrequently (\eg,
+once a day).  Finally, because certain inputs can be approximated (\eg,
+router ID is typically the loopback IP address of the router), the
+prototype can be effective even with limited input.
+
+
+\subsubsection{Prototype operation}  
+
+The prototype uses a database back-end,
+which provides efficient access to small subsets of the configuration
+data and routes and also stores intermediate results, which allow us to
+validate each part of the algorithm separately.
+Figure~\ref{fig:dataflow} summarizes how the prototype uses the inputs
+and intermediate results to generate a table of predicted routes.  The
+three modules shown in Figure~2 correspond to the first two stages from
+Section~\ref{sec:decompose}; assuming that $b_r \in \gamma(E)$ allows us
+to break the second stage into two simpler modules.  The prototype
+performs three operations:
+
+{\em Applying import policy to eBGP-learned routes:} This operation
+corresponds to the first step described in Section~\ref{sec:decompose}.
+Each row of the {\mf import} table specifies how a particular set of
+rows in the {\mf known routes} table should be modified; the prototype
+performs the actual modifications on the {\df modified routes} table.
+For each row in the {\mf import} table, the first operation applies the
+policy by (1)~finding the appropriate routes by selecting the set of
+routes learned at the corresponding router on that BGP session that
+match the specified AS path regular expression and (2)~setting the other
+attributes (\eg, local preference) according to the values specified in
+that row of the {\mf import} table.
+
+{\em Computing the egress routers for a destination:} This operation
+generates the set of the set of best eBGP-learned routes $B$ using the
+technique from Section~\ref{sec:fm_med},
+corresponding to the first half of stage~2 in
+Section~\ref{sec:decompose}.  
+%(As long as $b_r \in \gamma(B)$, the
+%decomposition of first computing $B$ for eBGP-speaking routers makes
+%sense.)  
+This part of the algorithm performs 
+``select'' statements on the {\df modified routes} table to successively
+refine the set of candidate routes.  The {\mf router ID} table contains
+the router ID for every BGP session at each router, which is needed for
+step 7 of the decision process.  As the method from
+Section~\ref{sec:egress_set} marks ``best'' routes, these routes are
+inserted into the {\df egress points} table for use by the third
+operation.
+
+{\em Computing the predicted routes:} This operation uses the iBGP
+signaling graph, IGP path costs, and technique from
+Section~\ref{sec:rr_nomed} to determine the best BGP route for each
+prefix at each router.  The module uses the iBGP signaling graph to
+determine which routes are advertised to each router, the IGP path costs
+between each pair of routers to determine the closest eBGP-speaking
+router to each ingress router (used in step 6 of the decision process),
+and the router ID of each iBGP session (step 7) to determine the egress
+router that each ingress router will select.  The {\mf RR clients} table
+represents the iBGP signaling graph and {\mf IGP path costs} represents
+the shortest IGP path between each pair of routers in the AS.  Each row
+of {\mf RR clients} specifies a route reflector client for a particular
+cluster; this provides the partial ordering needed by the algorithm.
+When applying the IGP tiebreaking step at an ingress router, {\mf IGP
+path costs} is used to determine the egress router with the shortest IGP
+path.
+
+
+\subsubsection{Optimizations}
+To ensure that the prototype operates on reasonable timescales, even
+with a large number of routes and eBGP sessions, we made the following
+optmizations: 
+(1)~as many routes have the same AS path attribute, store the AS paths
+in a separate table to accelerate lookups based on AS path regular
+expressions;  
+(2)~as many prefixes are advertised in exactly the same manner (\ie, at
+the same set of exit routers and with the same attributes), execute
+route computation only once for each {\em group of prefixes}; and
+(3)~upon an incremental policy change, only recompute the routes for
+prefixes affected by that change.
+
+
+\subsection{Evaluation}
+
+The analysis focuses on a snapshot of the network state from early
+morning (EST) on February 4, 2003.  We validate the prediction algorithm
+for the 91,554 prefixes whose eBGP routes are learned at peering points
+to other large providers, since we have routing tables from all of these
+locations; we excluded prefixes that were learned at other routers.
+(Recall that the prediction algorithm relies on knowing all of the
+potential egress routers where routes to a prefix are learned.)  The
+initial BGP routing data consists of 1,620,061 eBGP-learned routes with
+43,434 distinct AS paths.  We apply the tool to these inputs and check
+whether the emulator produces the same answers that the operational
+routers selected.  In addition to collecting BGP routing tables from the
+peering routers (where the eBGP routes are learned), we also collect BGP
+tables from several route reflectors and access routers to verify the
+results.
+
+\subsubsection{Performance evaluation}
+
+We ran the prototype on a Sun Fire 15000 with 192 GB of RAM and 48
+900 MHz Ultrasparc-III Copper processors.  Because this is a time-shared
+machine, we ran each of our experiments several times to ensure the
+accuracy of our measurements.  Except where noted, the prototype used
+only two 900 MHz processors (one for the database process and one for
+the emulator itself); the combined memory footprint of the
+database process and the emulator never exceeded 50 MB.  Because the
+emulator did not use more resources than a standard PC, the results of
+our evaluation should reasonably reflect the emulator's
+performance on commodity hardware.
+
+
+While our evaluation is preliminary, our performance tests demonstrate
+that the prototype can operate on timescales that could allow an operator
+to use a BGP prototype based on our algorithms in a practical setting.
+Our evaluation demonstrates the following points:
+\begin{itemize}
+\itemsep=-1pt
+\item The prototype computes the best routes for {\em one prefix\/} throughout a
+  large tier-1 ISP network in about one second.  Although predicting the
+  best route for {\em all\/} prefixes at all routers in such a
+  network takes several hours, this type of computation does not need to
+  be performed all that frequently in practice.
+\item Exploiting commonalities among route advertisements
+  to eliminate redundant computation reduces
+  the running time of the prototype by approximately 50\%.
+\item Evaluating the effects of an incremental
+  change to router configuration typically takes only a few seconds.
+\end{itemize}
+
+
+\subsubsection{Validation}
+
+To verify that the prototype produces correct answers, we perform
+validation using complete routing protocol implementations on production
+routers in a large operational network.  We performed independent
+validation for each of the three modules, as well as 
+an end-to-end validation to study the effect of error
+propagation on the best routes ultimately predicted by the prototype.
+We summarize the results of the end-to-end
+evaluation here. 
+
+We compared the prototype's computation with the same four routing
+tables used for the validation of the third module, with the exception
+that the input included the errors from the first two modules.  At
+these four routers, the prototype predicted the correct routes for more
+than 99\% of all prefixes, as summarized in Table~\ref{tab:e2e_summary}.
+\begin{table}[h!]
+\begin{center}
+{\small
+\begin{tabular}{r|r|l}
+{\em Router} & {\em \# Predictions} & {\em Total Errors} \\ \hline 
+
+RR1 &   89,343&  554 (0.620\%)   \\ %\hline
+RR2 &   88,647&  394 (0.444\%)   \\ %\hline
+AR1 &   88,649&  391 (0.441\%)    \\% \hline
+AR2 &   76,733&  511 (0.666\%)   \\ %\hline
+\end{tabular}
+\vspace{-0.15in}
+}
+\end{center}
+\caption{Summary of errors for end-to-end validation.} 
+\label{tab:e2e_summary}
+\end{table}
+Prediction errors are infrequent and result mainly the dynamics of the
+inputs.  Since most prefixes whose routes change frequently do not
+receive much traffic~\cite{Rexford:stability2002}, these inconsistencies would
+be permissible for most traffic
+engineering tasks.

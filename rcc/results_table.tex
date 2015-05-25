@@ -1,0 +1,64 @@
+%% Do NOT EDIT BY HAND!  Generated Automatically w/perl.
+\begin{table}[t]
+\begin{center}
+
+{\footnotesize
+\vspace*{-0.1in}
+\begin{tabular}{@{}p{2.25in}|rr@{}}
+{\bf Problem} & {\bf Latent} & {\bf Benign} \\ \hline  \hline
+\multicolumn{3}{@{}c@{}}{{\it Path Visibility}} \\ \hline
+{\bf Dissemination Problems} \\
+%%
+Signaling partition: \\
+\hspace*{0.1in} - of route reflectors & 4 & 1 \\
+\hspace*{0.1in} - within a RR ``cluster'' & 2 & 0 \\
+\hspace*{0.1in} - in a ``full mesh'' & 2 & 0 \\
+%%
+Routers with duplicate: \\
+\hspace*{0.1in} - loopback address & 13 & 120\\ 
+%%\hspace*{0.1in} - cluster ID &  &  \\
+iBGP configured on one end & 420 & 0 \\  
+   or not to loopback &  &  \\  
+%%synchronization enabled & 10 & 0 \\
+
+\hline  \hline
+\multicolumn{3}{@{}c@{}}{{\it Route Validity}} \\ \hline
+{\bf Filtering Problems} \\
+transit between peers  & 3 & 3 \\
+inconsistent export to peer & 231 & 2 \\
+inconsistent import & 105 & 12 \\ 
+
+eBGP session: \\
+\hspace*{0.1in} - w/no filters & 21 & --- \\ 
+\hspace*{0.1in} - w/undef. filter & 27 & --- \\
+\hspace*{0.1in} - w/undef. policy & 2 & --- \\
+filter: \\
+\hspace*{0.1in} - w/missing prefix & 196 & --- \\
+policy: \\
+\hspace*{0.1in} - w/undef. AS path & 31 & --- \\
+\hspace*{0.1in} - w/undef. community & 12 & --- \\
+\hspace*{0.1in} - w/undef. filter & 18 & --- \\
+
+
+
+\hdashline[1pt/1pt]
+{\bf Dissemination Problems} \\
+prepending with bogus AS & 0 & 1 \\
+originating unroutable dest. & 22 & 2 \\ 
+incorrect next-hop & 0 & 2 \\
+
+\hline \hline
+\multicolumn{3}{@{}c@{}}{{\it Determinism}} \\ \hline
+
+{\bf Ranking Problems} \\
+nondeterministic MED & 43 & 0 \\
+age-based tiebreaking & 259 & 0 \\
+
+
+
+\end{tabular}
+}
+\caption{BGP configuration faults in 17 ASes.} 
+\label{tab:errors}
+\end{center}
+\end{table}

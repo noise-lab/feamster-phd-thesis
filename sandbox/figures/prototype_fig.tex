@@ -1,0 +1,57 @@
+\documentclass{article}
+\usepackage{pst-all,color}
+
+\newfont{\dft}{phvrc at 6pt}
+\newfont{\mft}{phvro at 6pt}
+\newfont{\emt}{pagk at 6pt}
+\newfont{\hdt}{phvb at 6pt}
+
+
+\begin{document}
+\pagestyle{empty}
+
+\begin{pspicture}(8,4)
+%\showgrid
+\rput(0.5,2.5){\rnode{tables}{{\emt BGP tables}}}
+\rput(0.5,1.5){\rnode{updates}{\psframebox{{\mft known routes}}}}
+\ncline[linestyle=dashed,arrows=->]{tables}{updates}
+\rput(2,2.5){\rnode{config}{{\emt route maps}}}
+\rput(2,1.5){\rnode{import}{\psframebox{{\mft import}}}}
+\ncline[linestyle=dashed,arrows=->]{config}{import}
+\rput(1.25,0.5){\rnode{updates_i}{\psframebox{{\dft modified routes}}}}
+\ncline[linestyle=dashed, arrows=->]{updates}{updates_i}
+\ncline[linestyle=dashed,arrows=->]{import}{updates_i}
+\psline[linestyle=dotted](2.75,0)(2.75,3.5)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\rput(4,2.5){\rnode{nei}{{\emt BGP Neighbor Info}}}
+\rput(4,1.5){\rnode{router_id}{\psframebox{{\mft router ID}}}}
+\ncline[linestyle=dashed,arrows=->]{nei}{router_id}
+\rput(4,0.5){\rnode{egress}{\psframebox{{\dft egress points}}}}
+\ncline[linestyle=dashed,arrows=->]{router_id}{egress}
+\ncline[arrows=->]{updates_i}{egress}
+\psline[linestyle=dotted](5,0)(5,3.5)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\rput(5.75,2.5){\rnode{ibgp_topo}{{\emt iBGP topology}}}
+\rput(5.75,1.5){\rnode{rr_clients}{\psframebox{{\mft RR clients}}}}
+\ncline[linestyle=dashed,arrows=->]{ibgp_topo}{rr_clients}
+\rput(7.5,2.5){\rnode{igp_config}{{\emt IGP configuration}}}
+\rput(7.5,1.5){\rnode{ospf}{\psframebox{{\mft IGP Path Costs}}}}
+\ncline[linestyle=dashed,arrows=->]{igp_config}{ospf}
+\rput(6.75,0.5){\rnode{ing_eg}{\psframebox{{\dft predicted routes}}}}
+\ncline[linestyle=dashed, arrows=->]{rr_clients}{ing_eg}
+\ncline[linestyle=dashed,arrows=->]{ospf}{ing_eg}
+\ncline[arrows=->]{egress}{ing_eg}
+
+\ncarc[linestyle=dashed,arrows=->]{router_id}{ing_eg}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\psline[linestyle=dotted](0,2.75)(8,2.75)
+\rput(1.25,3.25){\rnode{apply}{{\hdt Apply
+	import policy}}} 
+\rput(4,3.25){\rnode{apply}{\parbox{0.7in}{\begin{center}{\hdt Compute best eBGP routes}\end{center}}}}
+\rput(6.75,3.25){\rnode{apply}{\parbox{0.9in}{\begin{center}{\hdt
+	Compute best route}\end{center}}}}
+
+
+\end{pspicture}
+\end{document}

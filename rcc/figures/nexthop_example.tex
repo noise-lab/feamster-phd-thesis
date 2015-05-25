@@ -1,0 +1,30 @@
+\centering
+\begin{pspicture}(8,1)
+%    \showgrid
+
+    \cnodeput(1,0.5){I1}{$I_1$}
+    \cnodeput(3,0.5){I2}{$I_2$}
+    \cnodeput(6.25,0.5){E1}{$E_1$}
+
+    \psset{nodesep=2pt, linestyle=dotted, arrows=<->}
+    \ncline{I2}{E1}
+
+    \psset{nodesep=2pt, arrows=<-}
+    \ncline{I1}{I2}
+
+    \rput(2.5,1.4){\rnode{o}{\parbox{2.5in}{\centering\small The next-hop
+    on routes readvertised from $E_1$ \\ must be reachable via this AS's
+    IGP.}}} 
+    \rput(2,0.5){\rnode{r1}{}}
+    
+    \psset{nodesep=1pt, linestyle=solid, linewidth=0.5pt, arrows=->}
+    \ncarc{o}{r1}
+
+
+
+    \psset{nodesep=0pt, arrows=-}
+
+    \psframe[fillcolor=white,linestyle=dashed, framearc=0.3](0.25,0)(4.5, 1)
+
+
+\end{pspicture}

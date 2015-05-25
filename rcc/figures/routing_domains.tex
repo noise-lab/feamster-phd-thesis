@@ -1,0 +1,25 @@
+    \begin{pspicture}(8,2.5)
+%    \showgrid
+    \rput(2.75,2.35){\rnode{text1}{{\scriptsize eBGP next-hop = IGP
+    destination}}}
+    \cnodeput(1,1.25){B}{{\em AS A}}
+    \cnodeput(7.45,1.25){C}{{\em AS C}}
+    \rput(4.5,1.8){\rnode{D}{{\em AS B}}}
+    \rput(3.25,1.25){\rnode{foo}{}}
+    \rput(5.75,1.25){\rnode{bar}{}}
+    \ncbox[boxsize=1,linearc=1]{foo}{bar}
+    \ncline[nodesep=3pt,linestyle=dashed]{B}{foo}
+    \ncline[nodesep=3pt,linestyle=dashed]{C}{bar}
+
+    \cnodeput[linestyle=dashed](1.6,1.25){e}{}
+    \cnodeput[linestyle=dashed](6.85,1.25){f}{}
+    \cnodeput[linestyle=dashed](3.25,1.25){a}{}
+    \cnodeput[linestyle=dashed](4,1.5){b}{}
+    \cnodeput[linestyle=dashed](5,1){c}{}
+    \cnodeput[linestyle=dashed](5.75,1.25){d}{}
+    \ncline[linestyle=dashed]{a}{b}
+    \ncline[linestyle=dashed]{b}{c}
+    \ncline[linestyle=dashed]{c}{d}
+
+    \ncline[nodesep=3pt,arrows=->]{text1}{e}
+    \end{pspicture}

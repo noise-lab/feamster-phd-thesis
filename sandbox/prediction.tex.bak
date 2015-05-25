@@ -1,0 +1,1506 @@
+%%%
+%%% prediction.tex
+%%%
+
+%\section{Route Prediction Algorithm}
+%\label{sec:algos}
+
+\section{BGP with Ordering and Full Visibility }
+\label{sec:egress_set}
+
+
+In this section, we present some basic properties of BGP route
+selection when a network employs a full mesh iBGP topology and the MED
+attribute is compared across all routes.  Based on these properties, we
+describe an algorithm that models BGP path selection for this simple case.
+
+
+\subsection{Notation and Basic Properties}\label{sec:basic}
+
+\begin{table}[t]
+\begin{small}
+\begin{center}
+\begin{tabular}{|lp{2in}l|} \hline
+{\em Symbol} & {\em Description} & {\em Section} \\
+\hline
+\multicolumn{3}{c}{{\sc Functions on Routes}} \\ \hline
+$\lambda_r$ & Takes a set of routes and outputs the best route, according 
+to the BGP decision process applied at router $r$ & \ref{sec:basic} \\
+$\gamma$ & Takes a set of routes and extracts the subset whose
+attributes are equally good up through the first four steps of the 
+decision process & \ref{sec:basic} \\
+$\sigma$ & Takes a set of routes and extracts the subset whose
+attributes are equally good up through the first {\em three} steps of the 
+decision process & \ref{sec:fm_med} \\ 
+\hline
+
+\multicolumn{3}{c}{{\sc Sets of Routes or Routers (Initial Inputs)}} \\ \hline
+$R$ & routers in the AS & \ref{sec:basic} \\
+$A$ & routers that have been activated & \ref{sec:rr_nomed} \\ 
+$E$ & eBGP-learned routes & \ref{sec:basic} \\
+$E_r$ & eBGP-learned routes at router $r$ & \ref{sec:basic} \\
+$N$ & number of eBGP-learned routes (i.e., $|E|$) & \ref{sec:basic} \\
+\hline
+
+\multicolumn{3}{c}{{\sc Sets of Routes (Intermediate and Final 
+Outputs)}} \\ \hline
+$I_r$ & iBGP-learned routes at router $r$ & \ref{sec:basic} \\
+$P_r$ & All routes learned at router $r$ & \ref{sec:basic} \\
+$b_r$ & The best route that router $r$ selects. & \ref{sec:basic}  \\ 
+$C$ & The set of candidate routes at some intermediate activation. A
+subset of $E$.&
+\ref{sec:simple} \\
+$B$ & The set of best routes computed by the algorithm.  A subset of
+$C$. & \ref{sec:simple} \\
+$L$ & The set of routes eliminated at some activation step. &
+\ref{sec:fm_med} \\
+\hline
+
+
+\multicolumn{3}{c}{{\sc iBGP Topology}} \\ \hline
+$S$ & iBGP sessions. & \ref{sec:rr_nomed} \\
+$G$ & iBGP session graph. $G = (R,S)$. & \ref{sec:rr_nomed} \\
+\hline
+
+\end{tabular}
+\end{center}
+\end{small}
+\caption{Description of the notation used in this paper, and the
+  sections where each piece of notation is introduced.}
+\label{tab:notation}
+\end{table}
+
+
+%Computing the effects of the BGP decision
+%process, iBGP route propagation, and IGP path computation for
+%each router in the AS is challenging.  
+% Sets E and I
+To model BGP path selection more precisely, we must first introduce some
+notation.  Table~\ref{tab:notation} summarizes the notation we use for
+the remainder of this paper and summarizes where this notation is
+introduced. 
+We assume that the AS has a set of $N$ eBGP-learned routes, $E$, for a
+given destination 
+prefix, which it learns at $R$ routers.
+$E$ contains the eBGP-learned routes after import policies have been applied.
+For convenience, we define $E_r
+\subseteq E$ as the set of eBGP-learned routes at router
+$r\in R$.  At any given time, a router also has zero or more
+iBGP-learned routes $I_r \subseteq E$.
+% decision process
+We also define two functions that we will use throughout the remainder of
+the paper:
+\begin{itemize}
+\itemsep=-1pt
+\item $\lambda_r$, which takes a set of best routes and outputs the best
+  route according to the BGP decision process in Table~\ref{tab:decision}.
+
+  The subscript $r$ on $\lambda_r$ provides necessary context because
+  different routers can apply the BGP decision process to the same set
+  of routes 
+  and obtain different results.  For example, in
+  Figure~\ref{fig:example}, router $X$ would treat the route learned
+  from AS $B$ as an eBGP-learned route with the router ID of the eBGP
+  session with $B$. On the other hand, $Z$ sees an iBGP-learned
+  route with IGP 
+  path cost of $2$ and the router ID associated with the iBGP session to
+  $X$.
+\item $\gamma$, which takes a set of BGP routes $C$, and outputs $C'
+  \subseteq C$, such that routes in $C'$ are the best routes based on
+  the first four steps in Table~\ref{tab:decision}.
+
+  Unlike $\lambda_r$, the function $\gamma$ is a function whose context
+  is {\em global}; that is, its context is not router-specific.  The
+  function $\gamma$, will be applied to a set of routes to eliminate all
+  routes that could {\em never} be the best route at any router.
+\end{itemize}
+
+
+%%%
+%%% Drawing on observation
+%%%
+Using Observation~\ref{t:order}, we devise an {\em activation
+sequence\/}, which ``activates'' one or more routers at any given phase.
+When activated, a router $r$ applies the BGP decision 
+process to compute a best route $\lambda_r(E_r \cup I_r)$, which
+may then be propagated via iBGP.  In reality, routers
+may be activated 
+in any order and may change their best route many times before the
+network converges.  In the following sections, we devise 
+activation sequences that allow us to {\em efficiently} compute
+the final routing decision.  
+
+%Every router within an AS must have a route for all external destination
+%prefixes.  Network operators use internal BGP (iBGP) to distributed
+%BGP-learned routes within an AS.  
+In this section and in
+Section~\ref{sec:med_model}, we will consider a {\em full mesh\/} iBGP
+topology (as described in Section~\ref{sec:intro}).  
+%(We will relax
+%this assumption in Section~\ref{sec:best_egress}, where we model BGP for
+%iBGP topologies that use ``route reflection''.)
+%
+A full mesh iBGP topology provides full visibility of BGP routes at each
+router; that is, every router learns the complete set of eBGP-learned
+routes.  
+Furthermore, when the MED attribute is compared across all routes (as
+opposed to 
+just those from the same neighboring AS) a router's preferences over the
+set of routes it learns form a total ordering (i.e.,  $\forall P'_r
+\subseteq P_r$, if 
+$a\in P'_r \subseteq P_r$ and $\lambda_r(P_r) = a$, then 
+$\lambda_r(P'_r) = a$).  These properties allow
+us to make two important observations about BGP's {\em steady state}
+path assignment.
+
+
+
+First, when MED is compared across all routes, any router that selects
+a route from the set of eBGP-learned 
+routes will select its locally-best route.  Formally, call the best
+route that router $r$ ultimately selects $b_r$. Then, $b_r \in E_r
+\Rightarrow b_r = \lambda_r(E_r)$.
+
+\begin{lemma}\label{l:c1}
+If the MED attribute is compared across {\em all} routes, then each
+router ultimately either selects its own best eBGP-learned route or some
+iBGP-learned route. 
+Formally,  $b_r \in E_r \Rightarrow b_r = \lambda_r(E_r)$.
+\end{lemma}
+\vspace*{0.1in}
+\begin{proof}
+By definition, each router $r$ applies the decision process to the union
+of the routes it learns via eBGP and iBGP: $b_r = \lambda_r(E_r \cup
+I_r)$. Therefore, either $b_r \in E_r$ or $b_r \in I_r$.   Furthermore,
+since the MED attribute is comparable across all routes, the router
+$r$'s preferences over routes in $E_r \cup I_r$ form a total ordering,
+so either $b_r = \lambda_r(E_r)$ or $b_r = \lambda_r(I_r)$.  But, if
+$b_r \neq \lambda_r(E_r)$, then $b_r = \lambda_r(I_r)$, so $b_r\in I_r$
+and $b_r \not\in E_r$.
+%Because step~5
+%of the BGP decision process prefers routes in $E_r$ over routes in
+%$I_r$, if $b_r \in E_r$, then, by definition, $b_r \in \lambda(E_r)$.
+\end{proof}
+
+
+If the iBGP topology forms a full mesh, each BGP-speaking router
+ultimately selects a route in $\gamma(E)$; that is, every router
+ultimately selects a route that has the maximum local preference,
+minimum AS path length, lowest origin type, and lowest MED (assuming
+MEDs are compared across all routes).
+
+
+\begin{lemma}\label{l:c2}
+If the iBGP topology forms a full mesh, every
+router $r$ will ultimately select a route, $b_r$ that is in
+$\gamma(E)$, where $E$ is the set of all eBGP-learned routes.
+Formally, $b_r \in \gamma(E)$. 
+\end{lemma}
+\vspace*{0.1in}
+\begin{proof}
+Assume that some router $r$
+selects $b_r \notin \gamma(E)$, and 
+define $P_r \subseteq E$, the set of routes that router $r$ learns.
+%Suppose that $r$ selects  
+%$b_r \not\in \gamma(E)$.  
+By definition, $b_r = \lambda_r(P_r)$, so
+$\lambda_r(P_r) \not\in \gamma(E)$.  This property implies that $P_r\cap
+\gamma(E) = \phi$; otherwise, $b_r$ would be better than all routes in
+$\gamma(E)$, which contradicts the definition of $\gamma$.
+%, since $b_r \in E$.  
+But, if $P_r \cap \gamma(E) = \phi$, then the iBGP topology
+does not form a full mesh, since at least one router
+$s \in R$ selects a route from $\gamma(E)$, and, in a full mesh
+topology, router $r$ would have learned that route from $s$.
+\end{proof}
+
+\noindent
+This lemma also holds when the iBGP topology does {\em not\/} form a
+full mesh as long as the MED attribute is compared across all routes,
+as discussed in more detail later in Section~\ref{sec:best_egress}.
+Table~\ref{tab:runningtimes} summarizes the roles of
+Lemmas~\ref{l:c1} and~\ref{l:c2} in the four scenarios we model; the
+table also indicates the computational complexity for each algorithm.
+In the following subsection, we
+%describe how these assumptions simplify modeling and 
+present an algorithm that models the outcome of the BGP decision
+process in the simple case of a full mesh iBGP topology where the MED
+attribute is compared across all routes, independent of the next-hop
+AS.
+% (we assume in the next section that the MED
+%attribute is compared across {\em all} routes).
+
+%But, if $\lambda_r(P_r) \not\in
+%\gamma(E)$, then all routes in $P_r \cap \gamma(E)$ must be worse in the first
+%four steps of the decision process than $\lambda_r(P_r)$ and, hence, that
+%all routes in $\gamma(E)$ are worse in first four steps than
+%$\lambda_r(P_r)$.  But, since $\lambda_r(P_r) \not\in \gamma(E)$, this
+%implies that $P_r \cap E = \phi$, which is a contradiction, since $P_r
+%\subset E$ as long as the iBGP configuration forms a full mesh.
+%
+
+
+\begin{table}[t]
+\begin{small}
+\begin{tabular}{r|cc|ccc}
+$\S$ & {\em MED} & {\em RR} & {\em Running Time} & Lem.~\ref{l:c1}
+  & Lem.~\ref{l:c2} \\ \hline 
+\ref{sec:simple} & No & No & $O(N+|R|^2)$ & $\bullet$ & $\bullet$ \\ 
+\ref{sec:fm_med} &Yes & No & $O(N \log N+ N|R|)$ &  & $\bullet$ \\ 
+\ref{sec:rr_nomed} &No & Yes & $O(N+|S|)$ & $\bullet$ & $\bullet$  \\ 
+\ref{sec:rr_med} &Yes & Yes & $O(N \log N + N|R| + N|S|)$ & &  \\ 
+\end{tabular}
+\end{small}
+\caption{Properties of the BGP path selection models in each of the four
+  cases (with and without MED, and with and without route reflection).} 
+\label{tab:runningtimes}
+\end{table}
+
+
+
+
+
+%are true, the sections in
+%our results for the four
+%scenarios, along with the sections where the algorithms and their
+%running times are presented.
+%under which Lemmas~\ref{l:c1} and~\ref{l:c2} are true, the sections in
+%which we describe the modeling algorithm for each case, and the
+%corresponding running time for each algorithm.  
+
+
+%% A full mesh iBGP topology allows us to decompose the algorithm into two
+%% distinct phases.  At the end of the first phase, each router that learns
+%% one or routes via eBGP either selects a route that it learns via eBGP,
+%% or it selects no route at all.  This phase determines whether an
+%% eBGP-speaking router ultimately selects an eBGP route to the
+%% destination, or whether it selects some iBGP-learned route.  As long as
+%% the iBGP topology forms a full mesh, the phase of the algorithm can
+%% determine whether each eBGP-speaking router will select its own
+%% locally-best eBGP route without modeling the details of the iBGP
+%% topology.
+
+%% The second phase of the algorithm determines the best BGP route at each
+%% router, given the IGP path costs to each eBGP speaking router and the
+%% iBGP signaling graph.  This phase assigns an egress router to every
+%% router that has not been assigned an eBGP-learned route at the end of
+%% the previous phase.  Because Lemma~\ref{l:c2} guarantees that every
+%% router ultimately selects a route from $\gamma(E)$, the assignment of
+%% egress routers to the remaining routers depends on the shortest IGP
+%% path, with ties broken based on router ID.
+
+
+%% In the version of the algorithm where MEDs are compared across all
+%% routes, we use this fact to show that applying $\gamma$ to the set of
+%% locally-best routes at each router does not eliminate any route that a
+%% BGP-speaking router would ultimately select.   XXX What about the
+%% version with MED?   Don't have to model the specific signaling graph
+%% we're given...just have to know that it's valid.  Can defer the handling
+%% of the signaling graph to box 3...
+
+%XXXSomething about how full mesh allows us to do $b_r = \lambda_r(B)$ to both
+%algorithms in this section.  Also, note that we're guaranteed not to
+%have deflections.
+
+
+\subsection{Algorithm: Full Mesh, No MED}\label{sec:simple}
+
+\begin{figure}
+\centering{\em Algorithm: Full Mesh, No MED}
+\centering\framebox{
+\begin{minipage}{4in}
+\begin{tabbing}
+\hspace*{0.5cm}\=\hspace{0.5cm}\=\hspace{0.5cm}\=\hspace{0.3cm}\=
+\hspace{0.3cm}\=\hspace{0.3cm}\=\hspace{0.3cm}\=\hspace{0.3cm}\=\kill
+{\sc SelectBest\_eBGP}($E$, $R$)\\
+\> {\em Build the set of locally best routes at each router.} \\
+\> {\em This set is the set of candidate best eBGP routes.} \\
+%%\>\> $b_r \leftarrow \lambda_r(E_r)$ \\
+\> $C \leftarrow \cup_r \lambda_r(E_r)$\\
+\> {\em Eliminate all routes from C which } \\
+\> {\em do not have highest local preference, etc.} \\
+\> $B \leftarrow \gamma(C)$ 
+\end{tabbing}
+\end{minipage}
+}
+\caption{Algorithm for computing the best route at eBGP
+  routers, assuming that MED is compared across all routes (i.e., that
+  there exists a total ordering of routes at each router).}
+\label{fig:b2_tot_order}
+\end{figure}
+
+
+Lemma~\ref{l:c1} makes it possible to propagate the effects of route
+selection at each router only once, since each router will select its
+locally best eBGP-learned route or some other router's best route.
+Lemma~\ref{l:c2} makes it 
+possible to compute the route that each router $r$ selects by simply
+applying $\lambda_r$ to the set of all locally best routes, $B$ (i.e.,
+$b_r = \lambda_r(B)$).
+When Lemma~\ref{l:c1} holds, 
+selecting the
+best route at each eBGP-speaking router is straightforward, because it
+is possible to produce a total ordering of routes at each router.  In
+this case, the algorithm for computing the best route at every
+eBGP-speaking router is simple, as shown in
+Figure~\ref{fig:b2_tot_order}.  The algorithm takes as input the set of
+all eBGP-learned routes ($E$) and the set of all eBGP-speaking routers
+($R$), and produces the set of best eBGP routes ($B$). $E_r$
+refers to all eBGP-learned routes learned by router $r$, and $C$
+represents the set of candidate routes after each router selects the
+best route from the set of its eBGP-learned routes.  The output of
+this algorithm is $B = \gamma(C)$, the set of all best routes to this
+destination,
+such that $b_r = \lambda_r(B)$.
+
+To prove that this algorithm is correct, we must show that this
+algorithm accurately emulates {\em one} activation sequence;
+Observation~\ref{t:order} guarantees that as long as the algorithm
+correctly emulates a single activation, it will correctly emulate BGP
+route selection. 
+
+\begin{theorem}\label{t:ebgp_to}
+When each router can produce a total ordering over all possible
+candidate routes, the algorithm in Figure~\ref{fig:b2_tot_order}
+correctly computes the outcome of the decision process 
+for all routers that select an eBGP-learned route as their best
+route.
+\end{theorem}
+
+\vspace*{0.1in}
+\begin{proof}
+We prove this theorem constructively, by showing that the algorithm
+correctly emulates an activation sequence and message ordering that
+could result in BGP.  Consider the following ordering:
+\begin{enumerate}
+\itemsep=-1pt
+\item All routers receive routes to the destination via eBGP.
+%(The order
+%  in which the eBGP routes at routers arrive does not matter, since we
+%  have not activated any routers.)  
+Then, every router is activated simultaneously.
+\item Every router advertises its locally-best route via iBGP.  
+%  The ordering of these messages does not matter, because all routers
+%  eventually learn all eBGP-learned routes. 
+  After all iBGP messages have been exchanged, every router is 
+activated simultaneously.
+%  This phase repeats until no new routes are advertised via iBGP.
+\end{enumerate}
+
+In the first phase, each router $r$ computes $\lambda_r(E_r)$,
+resulting in a set of candidate routes $C = \cup_r
+\lambda_r(E_r)$, as in the first line of the algorithm in
+Figure~\ref{fig:b2_tot_order}.  Then, each router learns these
+routes, resulting in $P_r=C$ for all $r\in R$.
+%
+%First, we
+%show that the set of candidate routes, $C$, is the same as activation
+%after phase~1 of the above sequence.  Second, we show that the set of
+%best routes, $B$, only contains routes for routers that select an
+%eBGP-learned route as their best route.
+% To see why the set of routes in $C$ must equal the set of routes after
+%activation phase~2, note that each router contributes at most one route
+%to $C$, and each router has exactly one best route after phase~2 of
+%activation.  The process by which each router $r$ selects a single best
+%route is precisely the same way that $b_r = \lambda_r(E_r)$ is generated,
+%by definition.
+Note that $B \subseteq C$ by definition, which means that each router
+that learns a route to the destination via eBGP has either zero or one
+route in $B$.  We consider both cases.
+%
+If a router $r$ has a route in $C$ but not in $B$, then $r$'s
+eBGP-learned route $b_r=\lambda_r(E_r)$ must have been worse according to the first
+four steps of the decision process than some other route, $b_s=\lambda_s(E_s)$ in $C$
+(otherwise, $\gamma(C)$ would not have eliminated it).  But in a
+full mesh iBGP topology, $r$ would learn
+a route via iBGP that is at least as good as $b_s$, so $b_r$ would also be
+eliminated in phase~2 of the activation.
+%
+Of course, if a router has a route in $C$, then that must be the route
+that it would select after phase~2 of activation: it is equally good as
+all routes in $\gamma(C)$ through the first 4 steps of the decision
+process (by construction), and it prefers its own best route over any
+iBGP-learned route (by step~5 of the decision process).
+\end{proof}
+
+
+\textbf{Computational Complexity.}
+When each router can form a total ordering over all possible candidate
+routes, the computational complexity for route prediction is
+proportional to the total number of routes in the system.  
+The first step of the algorithm scans all $N$ eBGP-learned routes and
+selects the best eBGP-learned route at each router, if any; at most
+$|R|$ routes remain after this step.  The second step selects, for each
+router $r \in R$, the best route from $R$.  
+Thus, the
+running time will be $O(N + |R|^2)$, where $N$ is the number of
+eBGP-learned routes, and $|R|$ is the number of routers in the system (a
+full mesh iBGP configuration will have $|R|(|R|-1)$ iBGP sessions.  When
+$|R|>N$, the $N$ term is dominated, so the running time is $O(|R|^2)$.
+When $N>|R|$, however, a simpler approach to the algorithm would simply be
+to apply $\lambda_r(E)$ at each router, which has $O(N|R|)$ running time.
+
+The algorithm we have presented in this section works as long as routers
+compare the MED attribute across all candidate routes and when the
+network does not use route reflection.  In practice, some ISPs configure
+their routers to compare the MED attribute across all candidate routes
+(often to avoid problems with oscillation), and most small networks do
+not use route reflection.
+
+
+\section{Modeling Path Selection with MED}\label{sec:med_model}
+
+In this section, we present how to model path selection when the MED
+attribute is compared only across routes learned from the same AS,
+rather than across all routes for a destination prefix.  MED prevents
+each router from having a total ordering over all possible candidate
+routes, so it is actually possible to have $b_r \in E_r$ without $b_r =
+\lambda_r(E_r)$.  In Section~\ref{sec:med}, we describe this problem in
+more detail and describe why the simple approach presented in
+Section~\ref{sec:simple} fails; then, we present an algorithm that
+accurately computes the outcome of BGP path selection when MED is
+compared only across routes from the same AS.
+
+\subsection{Problems Introduced by MED}\label{sec:med}
+
+The algorithm from Section~\ref{sec:simple} assumes that each router's
+ranking between two routes is independent of whether other routes are
+present (i.e., $\lambda_r(\{a,b\}) = a \Rightarrow \lambda_r(\{a,b,c\})
+\neq b, \;\forall a,b,c$).  When MED is only compared across routes from the
+same AS, the interaction between MED and router ID prevents the
+algorithm from simply selecting the locally best route at
+each router, because $b_r \in E_r \not\Rightarrow b_r = \lambda_r(E_r)$.    
+%
+This point has serious implications, because we can no longer assume
+that if a router selects an eBGP-learned route to a destination, that
+eBGP-learned route will be that router's locally best route; rather, the
+route that the router ultimately selects may be worse than the ``best''
+route at that router when compared only against routes learned via eBGP
+at that router.  Thus, the approach from Section~\ref{sec:simple}, which
+computes $b_r$ by taking the locally best route at each router from
+$\gamma(E)$, may not compute the correct result.  Using the example
+in Figure~\ref{fig:med}, we explain why two seemingly-natural
+approaches to computing the routes do not work:
+
+%This complication arises because the BGP decision process
+%only compares MED values for routes with the {\em same next-hop AS\/}.
+%As such, the MED value of an eBGP route learned at one router may affect
+%the {\em local\/} ranking of eBGP-learned routes at another router.
+
+\begin{itemize}
+\item {\em Local route elimination is not correct.}  
+The algorithm in Figure~\ref{fig:b2_tot_order} would first apply
+$\lambda_r(E_r)$ at each router.  Given the choice between the two
+eBGP-learned routes $a$ and $c$, router $X$ prefers $c$, since $c$ has a
+smaller router ID.  However, between routes $a$, $c$, and $d$, router
+$X$ prefers route $a$, because route $d$ eliminates route $c$ due to
+its lower MED value.  Thus, router $X$'s preference between routes $a$
+and $b$ depends on which route $Y$ selects.  The algorithm in
+Figure~\ref{fig:b2_tot_order} would compute
+$\lambda_X(\{a,c\})=c$ and $\lambda_Y(\{b,d\})=d$ (resulting in
+$C=\{c,d\}$), and ultimately compute $B=\{d\}$ because $d$ has a
+smaller MED value than $c$.  In reality, though, router $X$ would
+select route $a$ over $d$, because $a$ is an
+eBGP-learned route from a different neighboring AS.
+
+%One possible approach
+%would be to select a best route {\em locally} at each router
+%and
+%subsequently eliminate routes from this set by comparing routes within
+%this set of locally best routes (i.e., applying $\lambda_r(E_r)$ at each
+%router and subsequently applying $\gamma$ to the remaining routes, as in
+%the algorithm from Figure~\ref{fig:b2_tot_order}).   This approach does
+%not work.
+%
+%Consider Figure~\ref{fig:med} and assume
+%that AS 3 learns eBGP routes $\{a,b,c,d\}$ that are equally good through
+%the first four steps of the BGP decision process.  Routes $a$ and $b$
+%are learned 
+%from AS 1, and routes $c$ and $d$ are learned from AS 2.
+%
+%With this approach, router $X$ selects route
+%$c$ because its router ID is lower than that of $a$; similarly, router
+%$Y$ selects route $d$.  This suggests that (after applying $\gamma$ to
+%the remaining candidate routes) router $X$ would ultimately select $d$
+%as its best route, since $d$ is better than $c$ due to MED comparison.
+%This conclusion is incorrect, because $X$ will always prefer
+%route $a$ over route $d$.  Essentially, the interaction between MED and
+%router ID make it impossible to guarantee that route that a router
+%ultimately selects as its best route will be from the set of locally
+%best routes at each router.
+
+%\subsubsection{Strawman 2: Global Route Elimination}\label{sec:sm2}
+
+\item {\em Global route elimination is not correct.}
+%Comparing all of the eBGP-learned routes {\em globally} (i.e.,
+%without regard to which router originally learned a route) to determine 
+%the best route at a particular router is not correct.  
+It might also seem reasonable to apply $\gamma$ globally, followed by
+applying $\lambda_r$ locally at each router.
+%Consider the example in Figure~\ref{fig:med}.
+%
+In a global comparison of 
+the routes (i.e., when applying $\gamma(\{a,b,c,d\})$), $a$ and $c$ are
+first eliminated based on MED, and then  
+router $X$ picks route $d$ (since $d$ is preferred to $b$ based on
+the router ID comparison applied at router $Y$).   
+%J i'm confused about b vs. d based on router-id -- doesn't the iBGP
+%J session from Y have a single router-id that is the same for both
+%J of these routes?
+This conclusion is
+incorrect, because $X$ would {\em always\/} prefer route $a$ over route $d$,
+since $a$ is learned via eBGP (step 5) and $a$ and $d$ are equally good
+up through step 4 (recall that a router does not compare the MEDs of routes
+with different next-hop ASes).
+\end{itemize}
+
+\noindent
+The crux of the problem is that the MED attribute makes it impossible
+to produce an ordering of the routes at $X$; the relative ranking of
+two routes depends on the presence or absence of a third route.
+
+\begin{figure}[t]
+\centering\epsfig{file=figures/med.eps,width=0.75\linewidth}
+\caption{Interaction between MED and router ID in the BGP decision
+  process. Small numbers are router IDs.}
+\label{fig:med}
+\end{figure}
+
+%% Thus, the route prediction algorithm {\em must} take
+%% into consideration the ranking of routes at each router, but, because of
+%% the interactions between MED and router ID, it must eliminate suboptimal
+%% routes in a way that actually emulates some specific message ordering.
+
+
+
+\subsection{Algorithm: Full Mesh, MED}\label{sec:fm_med}
+
+
+\begin{figure}
+\centering{\em Algorithm: Full Mesh, MED}
+\centering\framebox{
+\begin{minipage}{4in}
+\begin{tabbing}
+\hspace*{0.5cm}\=\hspace{0.5cm}\=\hspace{0.5cm}\=\hspace{0.3cm}\=
+\hspace{0.3cm}\=\hspace{0.3cm}\=\hspace{0.3cm}\=\hspace{0.3cm}\=\kill
+{\sc SelectBest\_eBGP\_MED}($E$, $R$)\\
+\> {\em Build the set of initial locally best routes.} \\
+\> $C \leftarrow \sigma(E)$ \\
+\> $B_0 \leftarrow \phi$ \\
+\> {\bf do} \\
+\>\> $B_{i+1} \leftarrow \cup_r \lambda_r(C_r \cup B_i)$\\ 
+\> {\bf while} $B_{i+1} \neq B_i$ 
+\end{tabbing}
+\end{minipage}
+}
+\caption{Algorithm for computing the best route at eBGP
+  routers, assuming that MED is only compared across routes {\em from
+  the same neighboring AS}.} 
+\label{fig:b2_no_tot_order_2}
+\end{figure}
+
+To correctly handle the interaction between the MED and router ID
+attributes, the algorithm 
+emulates a
+message ordering that propagates the effects of MED on each
+router's best route.
+%(recall that Theorem~\ref{t:order} states that message ordering does
+%not affect the outcome of the decision process).
+Figure~\ref{fig:b2_no_tot_order_2} summarizes this algorithm.
+For this algorithm, we define a new function, $\sigma$, which takes a set
+of routes and 
+returns all routes equally good up through the first three steps of the
+BGP decision process (i.e., local preference, AS path length, and origin
+type).
+When applied to the
+network in Figure~\ref{fig:med}, the algorithm starts with all routes in
+$\sigma(E)$
+and proceeds as follows:
+
+
+
+
+
+\begin{enumerate}
+\itemsep=-1pt
+\item $B_1$ gets the locally best routes from $X$ and $Y$: $c$ and $d$,
+  respectively. That is, $B_1 = \{c,d\}$.
+\item On the second iteration, $X$ compares the routes from $C$ that it
+  learns via eBGP, $a$ and $c$, along with route $d$ from $B_1$, so
+  $\lambda_X(\{a,c,d\}) = a$.  Similarly, $\lambda_Y(\{b,c,d\}) = d$.
+  Thus, $B_2 = \{a, d\}$.
+\item On the third iteration, the process repeats, and  $B_3 = \{a,
+  d\}$, at which point the algorithm terminates.
+%% \item Construct $C$, the set of routes that are equally good up through
+%%   the first four steps of the decision process {\em when comparing
+%%   routes locally at each 
+%%   router}.  In this case, $C = \{ a, b, c, d\}$. 
+%% \item Construct $B$, the union of locally best routes from this
+%%   candidate set.  In this case, $B = \{ c, d\}$.
+%% \item Construct $L$, all routes in $B$ that are not equally good up
+%%   through the first four steps of the decision process; subtract this
+%%   set of routes from the set of candidate routes $C$.  In this case, $L
+%%   = \{ c \}$, and $C$ becomes $\{ d \}$.
+%% \item In the second iteration, $B$ becomes $\{ a, d\}$ and
+%%   $L = \phi$.
+\end{enumerate}
+
+\noindent
+This algorithm computes the correct routing decision for each router:
+$a$ at router $X$ and $d$ at router $Y$.  At router $Y$, $d$ is better
+than $a$ (step 5), $b$ (step 7) and $c$ (step 4).  At router $X$, $a$
+is better than $d$ (step 5); $a$ is not better than
+$b$, but this does not matter because router $Y$ does not select $b$,
+and $a$ is not better than $c$, but this does not matter since $c$ is
+always worse than $d$ (step 4).
+
+\begin{theorem}\label{t:ebgp}
+When MED is compared only across routes from the same
+neighboring AS, the algorithm from Figure~\ref{fig:b2_no_tot_order_2}
+accurately emulates the results of one activation sequence and message
+ordering for all routers that select an eBGP-learned route as their best
+route.
+\end{theorem}
+
+\begin{proof}
+Computing $\sigma(E)$ removes from $C$ all routes in $E$ that could
+{\em never\/} be the best route at any router (i.e., because they have
+a lower local preference, higher AS path, or lower origin type).
+Because the iBGP topology forms a full mesh, as long as there is a
+route in $E$ at {\em any\/} router that is better in the first three
+steps of the decision process, no router will select a route that is
+not in $\sigma(E)$.  The remainder of the algorithm evaluates a
+routing system with the routes in $E\setminus \sigma(E)$ removed.
+
+The remainder of the algorithm follows an activation sequence where
+each phase (or iteration of the loop) activates all of the routers
+simultaneously.  The proof proceeds by induction.
+After the first iteration of the loop, $B_0 = \phi$ and
+$b_r = \lambda_r(C_r)$, where $C_r$ is all of the routes learned at
+router $r$ via eBGP with the highest local preference, shortest AS path
+length, and lowest origin type.  
+By definition, $\lambda_r(C_r)$ returns each router's locally best
+route according to the BGP decision process, which is the same as that
+which the BGP decision process would select for each router after
+phase~1 of the activation sequence.
+%
+In a network with a full mesh iBGP configuration, each router $r$ then
+sends its locally best route, $b_r$, to every other router.
+
+Suppose the algorithm correctly computes the outcome of the BGP
+decision process for the first $i$ iterations of the
+activation sequence. 
+%In the $i$th step of the activation sequence, all
+%routers are simultaneously activated.  Each router $r$ applies the BGP
+%decision process to its available routes (i.e., its eBGP-learned routes
+%plus its iBGP-learned routes) and advertises its new best route via
+%iBGP.  
+%
+Assume that there is some router $r$ for which the algorithm computes
+$b'_{r,i+1} \neq b_{r,i+1}$.  Then, it must be the case that $b_{r,i+1}
+  \not\in C_r \cup B_i$, otherwise $\lambda_r$ would also have selected
+  $b_{r,i+1}$.   
+Either $b_{r,i+1}$ is an eBGP-learned
+route or it is an iBGP-learned route.  If it is eBGP-learned, then it
+must be in $C_r$, as we previously established.  If it is iBGP-learned,
+then it must be in $B_i$, since every iBGP-learned route is the best
+route of some other router in the AS.  But if either $b_{r,i+1}\in C_r$ or
+$b_{r,i+1}\in B_i$, then  $b_{r,i+1}
+  \in C_r \cup B_i$, which is a contradiction.
+%%If it is eBGP-learned, then
+%% $b'_{r,i+1}$ must also be eBGP-learned, by definition of $\lambda_r$. Thus,
+%% either $b_{r,i+1} \not\in D_r$, or $b_{r,i+1}$ is
+%% better according to the first 4 steps of the BGP decision process.  But
+%% we know that, if $b_{r,i+1}$ is eBGP-learned, then $b_{r,i+1} \in D_r$,
+%% by definition of $E$ and $\sigma$, and 
+%% If the latter is the case, then $lambda_r(D_r \cup
+%% B_i)$ would have also selected $b'_{r,i+1}$.  If, on the other hand,
+%% $b_{r,i+1}$ is iBGP-learned,
+\end{proof}
+
+The algorithm in Figure~\ref{fig:b2_no_tot_order_2} is correct, but it is
+not efficient: each iteration of the loop repeatedly considers routes
+that have been ``eliminated'' by other routes.
+A more computationally efficient algorithm would eliminate routes
+from consideration at each iteration if we know that they could never be
+the best route at any router---such is the spirit of applying
+$\sigma(E)$ across the initial set of routes.  Unfortunately, as we know
+from Section~\ref{sec:med}, because the MED attribute
+is not comparable across all routes and comes before the router ID step
+in the decision process, it is possible for a route that is not in the
+set $B_i$ to emerge in the set $B_j$ for some $j>i$.  We now formally
+define a condition by which routes may be eliminated.
+
+\begin{lemma}\label{l:elim}
+Suppose there exist two routes $s \in C_r$ at router $r$ and $t \in
+C_{r'}$ at router $r'\neq r$.  If $t\in B_i$ and $\lambda_r(s,t) = t$,
+then $s
+\not\in B_j \; \forall j > i$.
+\end{lemma}
+
+\begin{proof}
+First, note that as long as $t \in B_j$, then $s \not\in B_j$
+because route $t$ is preferable to $s$
+%Then,
+%$t$ is not in $B_j$ (otherwise, $s$ would be
+%eliminated upon comparison with $t$).  
+Also note that because all routes in $C$ are equally
+good up the MED comparison and eBGP-learned routes are preferred over
+iBGP-learned routes, we know that $\lambda_r(s,t) = t$ because
+$\mbox{MED}(t) < \mbox{MED}(s)$.  
+Now,
+suppose there exists some $j > i$ for which $t \not\in B_j$.  
+Call the best route at router $r'$ at
+step $i$, $v = \lambda_{r'}(C_{r'}) \neq t$; again, we know that
+$\mbox{MED}(v) < \mbox{MED}(t)$.  But this means that $\mbox{MED}(v) <
+\mbox{MED}(s)$, $\lambda_r(s,v) = v$, and, thus, $s \not\in B_j$.
+%Any route $v$ that is better than $t$ at
+%router $r'$ will also be better than $s$ at router $r$.  
+\end{proof}
+
+We can use this result to devise a more efficient route prediction
+algorithm that eliminates, at every iteration, a router's locally best
+route if it has
+a higher MED value (and same next-hop AS) than any other router's
+locally best route.  This algorithm is described in
+Figure~\ref{fig:b2_no_tot_order} and shown conceptually in
+Figure~\ref{fig:b2_stack}; it can also be thought of in terms of
+an activation sequence: (1)~each router learns routes via eBGP, selects
+a locally best route, and readvertises via iBGP; (2)~each router
+compares its locally best route with all other routes learned via iBGP,
+and {\em eliminates} its own locally-best route from the system if it is
+worse than some other locally-best route at another router; (3)~the system is restarted
+(from phase~1) with the eliminated routes removed.   This algorithm is
+computationally more efficient than the one in
+Figure~\ref{fig:b2_no_tot_order_2}; we now analyze its running time
+complexity. 
+
+\begin{figure}
+\centering{\em Algorithm: Full Mesh, MED (Alternate Algorithm)}
+\centering\framebox{
+\begin{minipage}{4in}
+\begin{tabbing}
+\hspace*{0.5cm}\=\hspace{0.5cm}\=\hspace{0.5cm}\=\hspace{0.3cm}\=
+\hspace{0.3cm}\=\hspace{0.3cm}\=\hspace{0.3cm}\=\hspace{0.3cm}\=\kill
+{\sc SelectBest\_eBGP\_MED}($E$, $R$)\\
+\\
+\> {\em Eliminate all routes from $E_r$ (locally at $r$) which } \\
+\> {\em do not have highest local preference, etc.} \\
+\> $C \leftarrow \sigma(E)$ \\
+\\
+\> {\em Keep track of the best routes at each router.} \\ 
+
+\> {\bf do} \\
+\>\> $B \leftarrow \cup_r \lambda_r(C_r)$ \\
+\>\> $L \leftarrow B \setminus \gamma(B)$ \\
+\>\> $C \leftarrow C \setminus L$ \\
+\> {\bf while} $L \neq \phi$
+\end{tabbing}
+\end{minipage}
+}
+\caption{Computationally efficient algorithm for computing the best
+  route at eBGP routers, assuming that MED is only compared across
+  routes {\em from the same AS} (i.e., that there is no total ordering
+  of routes).}
+\label{fig:b2_no_tot_order}
+\end{figure}
+
+
+%% First, we show that the outcome of
+%% assignment to $B$ is the same as the first two steps of the activation
+%% sequence.  Next, we show that repeated subtractions of $L$ from $C$ has
+%% the same effect as the third step of the activation sequence.  Finally,
+%% we show that when the algorithm terminates, the activation sequence also
+%% produces no new BGP messages (hence, the final result of the algorithm
+%% is the same as the final result produced by BGP).
+
+%% To see why the initial assignment of $B$ is the same as the first two
+%% steps of the activation sequence, note that, as before, each router that
+%% learned a route via eBGP contributes exactly one best route to $B$, and
+%% that this route, $\lambda_r(C_r) = \lambda_r(E_r)$, is defined
+%% by the BGP decision process. 
+
+%% Subtracting $L$ from $C$ eliminates all routes from $C$ that are
+%% (1)~currently the locally best route at some router, $r_i$; and
+%% (2)~worse than the locally best route
+%% at some other router, $r_j$  according to the first four steps of the
+%% BGP decision process.  This elimination corresponds to an
+%% activation where $r_j$ selects its currently best route, $b_{r_j}$ and
+%% advertises it via iBGP.  Assuming constraint~2 is satisfied, $r_i$
+%% either learned $b_{r_j}$ (by Lemma~\ref{l:c2}), which
+%% would also eliminate $b_{r_i}$.   When the algorithm loops, the process
+%% repeats, with the set of best routes containing the new locally best
+%% route at $r_i$.
+
+
+\begin{figure}[t]
+\centering\epsfig{file=figures/stack.eps,width=0.75\linewidth}
+\caption{Implementation of the route computation algorithm from
+  Figure~\ref{fig:b2_no_tot_order}.  Each stack represented one of $|R|$
+  total routers, and each stack element represents one of $L$ routes.
+  The bottom elements of the $|R|$ stacks represent $B_i$, the elements
+  marked $L$ represent routes that are worse than the routes at the
+  bottom of the remaining stacks according to the first four steps of
+  the decision process, and the shaded routes represent $B_{i+1}$.} 
+\label{fig:b2_stack}
+\end{figure}
+
+
+\textbf{Computational Complexity.}
+Understanding the running time of the algorithm from
+Figure~\ref{fig:b2_no_tot_order} is easiest when we consider the
+implementation of the algorithm shown in
+Figure~\ref{fig:b2_stack}.   In this figure, the eBGP-learned routes at
+each router are represented as a stack and are sorted {\em locally}
+(i.e., compared only to other routes learned at the same router).  The
+bottom of the stack represents the best route learned at that router;
+the route that is second from the bottom is the second best route, and
+so forth.  Then, the algorithm from Figure~\ref{fig:b2_no_tot_order}
+can be interpreted as follows:
+\begin{itemize}
+\itemsep=-1pt
+\item $B \leftarrow \cup_r \lambda_r(C_r)$ is the union of all of the
+  elements at the bottom of the stack and does not need to be computed
+  explicitly, assuming each stack is sorted.  The complexity of sorting
+  $N$ total routes distributed across $|R|$ stacks is $O(N \log N)$.
+\item $L \leftarrow B \setminus \gamma(B)$ marks a route at the bottom
+  of a stack if that route is worse than any route at the bottom of
+  another stack, according to the first four steps of the BGP decision
+  process.  This process takes at most two scans of the routes at the
+  bottom of the $|R|$ stacks, so the running time is $O(|R|)$.
+\item $C \leftarrow C \setminus L$ ``pops'' the marked routes from the
+  bottom of 
+  the stacks, where appropriate.  This process requires a single scan
+  through $|R|$ stacks and at most $|R|$ pop operations, so the running time
+  is $O(|R|)$.  
+\item In the worst case, the above three steps repeat until $N-1$ routes
+  are popped from the stacks, and each iteration only pops a single
+  route.  Thus, in the worst case, the running time for the algorithm is
+  $O(N \log N + N|R|)$.
+\end{itemize}
+
+%\begin{theorem}\label{th:noelim_global}
+%The second phase of the BGP route prediction algorithm
+%, which selects
+%the set of best routes at the eBGP-speaking routers, 
+%does not backtrack.
+%\end{theorem}
+
+%% \noindent
+%% The proof of this theorem follows from two proofs in our previous
+%% work~\cite{feamster:02}. In this work, we first show that the second
+%% phase of the route prediction algorithm never eliminates a candidate
+%% route that an eBGP-speaking router would have selected as its best route
+%% (Theorem A.4) and the algorithm always eliminates every candidate route
+%% that BGP eliminates (Theorem A.4).  Additionally, the second phase of
+%% the algorithm correctly predicts the set of best eBGP routes without
+%% backtracking.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+\section{Route Computation with Route Reflection}
+\label{sec:best_egress}
+
+A full mesh iBGP topology does not scale to large networks because a
+network of $|R|$ routers requires $O(|R|^2)$ iBGP sessions.  Network
+operators use a technique called {\em route reflection}, which improves
+scalability by introducing hierarchy but makes modeling BGP path
+selection more complicated.
+%
+First, we define an iBGP
+signaling topology, expound on problems introduced by route reflection,
+and
+describe constraints on iBGP configuration that must hold for modeling
+to be possible. Next, we propose an algorithm that
+efficiently computes the outcome of BGP path selection in a network with
+route reflection, and then we present a minor
+modification to the algorithm that is necessary if MED is only compared
+across routes from the same neighboring AS.
+
+\subsection{Problems Introduced by Route Reflection}\label{sec:problems_rr}
+
+\begin{figure}
+\centerline{\epsfig{file=figures/ibgp.eps,width=0.5\columnwidth, height=1in}}
+\caption{Example iBGP signaling graph}
+\label{fig:ibgp}
+\end{figure}
+
+
+%%%
+%%% Signaling graph
+%%%
+A router does not normally forward iBGP-learned routes over other iBGP
+sessions, but it can be configured as a {\em route reflector\/} (RR),
+which forwards routes learned from one of its route-reflector clients to
+its other clients.  The routers in an AS form a directed graph, $G =
+(R,S)$, of iBGP sessions called a {\em signaling graph}. Each edge $a =
+(u,v) \in S$ where $u,v \in R$ corresponds to an iBGP session between a
+pair of routers. We then define three classes of edges: (1)~$a \in \mbox{{\bf
+down}}$ if $v$ is a route reflector client of $u$; (2)~$a \in \mbox{{\bf
+up}}$ if $u$ is a route reflector client of $v$; and (3)~$a \in
+\mbox{{\bf over}}$ if $u$ and $v$ have a regular iBGP session between
+them.  Figure~\ref{fig:ibgp} shows an example signaling
+graph.  In a full mesh configuration, every pair of routers has an edge
+in {\bf over}, 
+and both the {\bf up} and {\bf down} sets are empty. 
+%\footnote{Occasionally, routers within an AS can also be grouped
+%into ``confederations''; because these are used much less frequently
+%than route reflectors, we focus on modeling route reflectors.}
+
+
+
+Previous work has shown that BGP converges to a stable solution as long
+as the structure of the signaling graph satisfies certain sufficient
+conditions~\cite{wilfong:02}.  Accordingly, we refine
+Constraint~\ref{a:ibgp} in terms of these sufficient conditions to
+guarantee that an iBGP topology with route reflection converges:
+
+\begin{constraint}
+\label{a:sane2}
+(a) $\forall \;u,v,w \in R$, $((u,v) \in \mbox{{\bf down}} \mbox{
+  and } (u,w) \not\in \mbox{{\bf down}}) \Rightarrow
+  \lambda_u(\{\rho_v,\rho_w\}) = \rho_v$, where $\rho_v$ represents any route
+  learned from $v$ and $\rho_w$ is any route from $w$;
+%\lambda_r(r_v) >
+%\lambda_r(r_w)$
+and (b) the edges in $\mbox{{\bf up}}$ are acyclic.
+%, and
+%(c) the shortest IGP path between each pair of routers is a valid
+%signaling path.
+\end{constraint}
+\vspace{0.1in}
+
+\noindent
+Part (a) is satisfied when routers do not change the attributes of
+iBGP-learned routes and each router has a lower IGP path cost to its
+clients than to other routers. The common practices of applying import
+policies only on eBGP sessions and placing RRs and their clients in
+the same point-of-presence (i.e., ``PoP'') ensure that these
+conditions hold.
+%
+Part (b) states that if $a$ is an
+RR for $b$, and $b$ is an RR for $c$, then
+$c$ is not an RR for $a$, consistent with the notion of a
+route-reflector hierarchy (rather than an arbitrary signaling graph).  
+
+
+%%%
+%%% Convergence to a single answer
+%%%
+Even a route reflector configuration that converges can wreak havoc on
+the algorithms from Sections~\ref{sec:simple} and~\ref{sec:fm_med}.
+Route reflectors hide  information by advertising only a {\em single
+best route to its iBGP neighbors}.
+For example, in
+Figure~\ref{fig:ibgp}, if $W$ and $Z$ have eBGP-learned routes, router
+$Y$ learns a single route from its route reflector RR1.  Suppose that
+RR1 selects the eBGP route advertised by $Z$.
+Then, $Y$ would pick $Z$'s route as well,
+even if $Y$ would have preferred $W$'s route over $Z$'s route.  Note
+that $Y$ 
+makes a different routing decision than it would if it could select
+its best route from all the eBGP routes (i.e., from both $W$ and $Z$).
+In large networks, route reflection reduces the number of routing
+messages and iBGP sessions, which helps scalability, but it makes
+modeling BGP route selection more complicated in the following ways:
+
+\begin{enumerate}
+\itemsep=-1pt
+
+\item A router will not typically learn every route that is equally good
+  up through the first four steps of the decision process.  That is, it
+  is possible (and likely) that some routers will not learn every route
+  in $\gamma(B)$.  In Section~\ref{sec:rr_nomed}, we describe an
+  algorithm that handles this case.
+%  This fact is significant because the route computation algorithm
+%  cannot elimiante a route simply because it is not in $\gamma(B)$ (as
+%  in Figure~\ref{fig:b2_no_tot_order} Section~\ref{sec:fm_med}).
+
+\item If a network uses route reflectors, {\em and} MED is only
+  compared across routes from the same AS, the routes that some routers
+  ultimately select may be {\em worse} than some
+  eBGP-learned routes, according to the first four steps of the
+  decision process.  That is, it may be the case that $b_r \not\in
+  \gamma(E)$ for some router $r$.  In Section~\ref{sec:rr_med}, we make
+  a slight modification to the algorithm in Section~\ref{sec:rr_nomed}
+  to handle this case.
+%This artifact is significant because
+%  the algorithm can no longer eliminate a candidate route simply because
+%  it is not contained in $\gamma(E)$.
+\end{enumerate}
+
+\subsection{Algorithm: Route Reflection, No MED}\label{sec:rr_nomed}
+
+Route reflection obviates the need for routers in an AS to form a full
+mesh topology, but it also means that some routers may not learn all
+routes in $\gamma(B)$.  This artifact has two implications.  First, the
+algorithm cannot simply assign non-eBGP-speaking routers the
+route from the ``closest'' eBGP-speaking router, because a router may
+not learn the route.
+% corresponding to the shortest path to the exit.
+In other words, applying $b_r \leftarrow \lambda_r(B)$ may not always be
+correct. 
+%Rather, the routing alternatives
+%available to a particular router depends on its position in the route
+%reflector hierarchy. 
+%
+For example, consider the network shown in Figure~\ref{fig:ibgp1}.  $W$,
+$X$, and $Y$ are clients of route reflector $RR$, and $Z$ is a regular
+iBGP peer of $Y$.  $X$ and $Y$ have a short IGP path between them, but
+they are {\em not} directly connected by an iBGP session.  Routers $W$,
+$X$, and $Z$ have eBGP routes that are equally good through the first
+four steps of the decision process, and have thus selected their own
+eBGP-learned routes.  In this network, $Y$'s closest egress point is
+$X$, but $Y$ selects $W$ since $RR$'s closest egress router is $W$.
+%
+Second, often there is {\em no consistent ranking of possible egress
+  routers} from some non-eBGP-speaking router.
+%
+For example, in Figure~\ref{fig:ibgp1}, $RR$ prefers egress router $W$
+because its IGP path 
+cost to $W$ is the shortest.  Router $Y$'s preferences over possible egress
+routes depends on the presence or absence of other routes.  If the AS
+learns routes for some destination via eBGP sessions at routers $X$ and
+$Z$, then router $Y$ prefers using $X$ as an egress router.  On the
+other hand, if the AS learned routes at $W$, $X$, and $Z$, then $Y$
+prefers using $Z$, which implies that $Y$ prefers egress $Z$ over $X$
+and is inconsistent with $Y$'s choice when only $X$ and $Z$ are
+available egress routers.
+
+\begin{figure}[t]
+\centering\epsfig{file=figures/ibgp1.eps,width=0.5\linewidth}
+\caption{When an AS's iBGP topology uses route reflectors, a router may
+  not always discover the route corresponding to its closest egress
+  router. }
+\label{fig:ibgp1}
+\end{figure}
+
+\begin{figure}[t]
+\begin{small}
+\begin{center}
+\centering{\em Algorithm: Route Reflection, No MED}
+\centering\framebox{
+\begin{minipage}{4in}
+\begin{tabbing}
+\hspace*{0.5cm}\=\hspace{0.5cm}\=\hspace{0.5cm}\=\hspace{0.3cm}\=
+\hspace{0.3cm}\=\hspace{0.3cm}\=\hspace{0.3cm}\=\hspace{0.3cm}\=\kill
+{\sc SelectBest\_eBGP\_RR}($E$, $R$)\\
+%\> {\em Build sets containing the top and bottom of the graph.} \\
+%\> $T \leftarrow \{ r | r \in R \mbox{and} \not\exists s \; \mbox{s.t.}
+%(r,s) \in \mbox{{\bf up}} \}$ \\
+%\> $M \leftarrow \{ r | r \in R \mbox{and} \not\exists s \; \mbox{s.t.}
+%(r,s) \in \mbox{{\bf down}} \}$ \\
+%\\
+%\> {\em Mark bottom as activated and assign best routes.}\\
+%\> $A \leftarrow M$\\
+%\> $B \leftarrow \cup_r\lambda_r(E_r)$ \\
+%\\
+\\
+\> {\em Proceed up the hierarchy, assigning best routes.} \\
+\> {\em Find a router for which all children are activated.} \\
+\> $A \leftarrow \phi$\\
+\> {\bf while} $\exists r \in R$ s.t. $r \not\in A$ and $c
+\in A \; \forall c \in \mbox{{\sc down}}(r)$\\ 
+\>\> $I_r \leftarrow \cup_{c \in\mbox{{\sc down}}(r)} b_c$ \\
+\>\> $b_r \leftarrow \lambda_r(I_r \cup E_r)$ \\
+\>\> $A \leftarrow A \cup r$ \\
+\\
+\> {\em Proceed down the hierarchy.} \\
+\> {\em Find a router for which all parents are activated.} \\
+\> $A \leftarrow \phi$\\
+\> {\bf while} $\exists r \in R$ s.t. $r \not\in A$ and $c
+\in A \; \forall c \in \mbox{{\sc up}}(r)$\\ 
+\>\> $I_r \leftarrow \cup_{c \in\mbox{{\sc up}}(r) \cup \mbox{{\sc
+      over}}(r)} b_c$ \\ 
+\>\> $b_r \leftarrow \lambda_r(I_r \cup b_r)$ \\
+\>\> $A \leftarrow A \cup r$ 
+\end{tabbing}
+\end{minipage}
+}
+\end{center}
+\end{small}
+\caption{Efficiently computing the best route at each router in a
+  network with route reflection but no MED.}
+\label{fig:best_ibgp}
+\end{figure}
+
+To account for the fact that all routes are not visible at all routers,
+we design an algorithm that emulates a certain activation sequence,
+making route assignments at each router where possible and 
+propagating the effects of these decisions to other routers, without
+ever having to revisit any assignment. This algorithm is
+shown in Figure~\ref{fig:best_ibgp}.
+%
+The algorithm first activates the routers from the bottom of the
+route reflector hierarchy upwards, which guarantees that
+each router selects a {\em down\/} route where possible, as
+required by Constraint~\ref{a:sane2}(a).   Because the algorithm moves
+upwards from the bottom of the hierarchy, it performs computations for
+each router as all of the routes from its clients become known;
+computations for these routers never need to be revisited, since, by
+Constraint~\ref{a:sane2}, a router always prefers routes from its
+children over routes from its peers or parents.
+%
+Visiting the routers in the {\em down\/} direction ensures
+that the algorithm performs computations for the remaining routers using
+all available routes from the {\bf up} and {\bf over} sets.
+Considering the routers in this particular ordering guarantees that no
+router makes a decision that should change later, after some other
+router makes a decision.
+%
+The algorithm defines two partial orderings of the
+routers based on the elements of the {\bf up} and {\bf down} sets.
+We can define these two partial orderings because Constraint~\ref{a:sane2}(b)
+requires that the signaling graph does not have any cycles of these
+edges, so each partial ordering must have a top and bottom element.
+%
+
+Applying this algorithm to the example in Figure~\ref{fig:ibgp1}, the
+shaded routers select best routes in the first step, since each of those
+routers is at the bottom of the hierarchy and, thus, all of their
+neighbors in {\bf down} have been activated (since they have none). $Y$
+is activated, but it does not select a route at this point because it 
+has no neighbors in {\bf down}. 
+Since these four routers are at the same level in the hierarchy,
+they can be activated in any order.
+%
+Then $RR$ is activated, since all of its children are activated; it
+applies $\lambda_{RR}(\{r_W,r_X\})$ and selects $r_W$ because it has the
+smallest IGP path cost.  The routers are all activated again in the
+downward direction;
+$Y$ receives $r_W$ from $RR$ and compares it with $r_Z$, which is its
+best route to the destination.  $X$ and $Z$ also receive $r_W$ but continue
+to select their own route, since $\lambda_r$ prefers eBGP routes over
+iBGP routes.
+
+
+\begin{theorem}\label{t:exit}
+If each router can form a total ordering over the set of all candidate
+routes, then the algorithm in Figure~\ref{fig:best_ibgp} correctly
+computes the outcome of the BGP decision process, $b_r$, for all routers
+$r \in R$.
+\end{theorem}
+\vspace*{0.1in}
+
+\begin{proof}
+Assume some router $r$ that selects a route,
+$b_r$, that is different than the route assigned by the algorithm in
+Figure~\ref{fig:best_ibgp}, $b'_r$.  
+Then, the mismatch can occur in one of two cases: (1)~when $b_r$ 
+is learned from a session in {\bf down}, or (2)~when $b_r$ is learned from a
+session not in {\bf down} (i.e., in either {\bf up} or {\bf over}).  
+
+Consider the case where $b_r$ is learned from a session in {\bf down}. 
+Call $b'_r$ the first case of an incorrect computation (i.e., the
+algorithm has correctly computed the best route for all routers below
+$r$ in the hierarchy); since we examine the first such mismatch, $I_r$
+is correct.  
+If $b'_r$ is also in {\bf down}, then $b'_r = \lambda_r(I_r \cup E_r)$
+when the algorithm traverses up the hierarchy, which implies that $b'_r$
+is better than $b_r$ according to the BGP decision process, and $r$
+would have actually selected $b'_r$.  If $b'_r$ is in {\bf up} or {\bf
+over}, then it must have been the case that it was better, according to
+the BGP decision process, than the displaced route $b_r$ in {\bf down}.
+%But then, the algorithm would have also selected $b_r$ using
+%$\lambda_r$.
+But then, by definition of $\lambda_r$, router $r$ would have also selected
+$b'_r$ in BGP.
+Thus, the algorithm
+correctly computes $b_r$ for all routers $r$ that select a best route
+from {\bf down}.
+
+
+Assume $b_r$ is learned from a session in {\bf up} or {\bf over}.  
+%
+From the first half of the proof, we know that the algorithm correctly
+computes $b_r$ for all routers that 
+select a route from {\bf down}, so call $b'_r$ the first instance of a
+mismatch for some router that selects a best route from {\bf
+up} or {\bf over} (i.e., the algorithm correctly assigns $b_r$ for all
+routers higher in the hierarchy than $r$). Again, because we consider the first
+such mismatch, we know that $I_r$ is correct. 
+%
+If 
+the route that the algorithm selects, $b'_r$, is in {\bf down}, then, by
+Constraint~\ref{a:sane2}(a), BGP could not have selected $b_r$, so we
+have a contradiction.  
+%
+If both $b_r$ and $b'_r$ are learned from
+sessions in {\bf up} and {\bf over}, then both are in $I_r$, and,
+according to the $\lambda_r(I_r \cup b_r)$ step in the algorithm and by
+definition of $\lambda_r$, both the algorithm and the BGP decision
+process would select the same route.
+\end{proof}
+
+This theorem relates to one from earlier work~\cite{gao:01a} on
+sufficient conditions for stable BGP routing {\em at the AS level}; this
+work provides a constructive proof showing that the sufficient
+conditions guarantee stability.  In subsequent work, Griffin {\em et
+al.} discovered that the sufficient conditions for stable eBGP routing
+were analogous to those for stable iBGP routing with route
+reflection~\cite{wilfong:02}.  The algorithm from this section applies
+the iBGP analog of the constructive proof from the work on stable
+interdomain routing to develop an algorithm for {\em computing} that
+stable path assignment.
+
+\begin{figure}[t]
+\centering\epsfig{file=figures/rr_hierarchy.eps,width=0.65\linewidth}
+\caption{Running time analysis of an iBGP graph walk.}
+\label{fig:rr_hierarchy}
+\end{figure}
+
+
+\textbf{Computational Complexity.}  This route computation involves
+traversing the route reflector hierarchy exactly twice.  The running
+time of this algorithm is $O(N + |S|)$, where $N$ is the number of
+eBGP-learned routes, and $|S|$ is the number of iBGP sessions.  To see why
+this is the case, consider the $l$-level route reflector hierarchy
+pictured in Figure~\ref{fig:rr_hierarchy}.  Starting from the bottom of
+the hierarchy, the algorithm must perform comparisons over $N$ routes to
+determine the routes that the $M$ routers at the bottom of the hierarchy
+select (the number of routers at the bottom of the hierarchy is
+inconsequential: these comparisons can be performed by constructing a
+subset of $M$ routes from the original $N$ routes, which can be
+performed in a single scan of the $N$ routes).  The algorithm them
+propagates the selection of these $M$ routes to the next level of the
+hierarchy, where $s_l$ comparisons must be performed across the routers
+at the next highest level, where $s_l$ is the number of iBGP sessions at
+level $l$.  Repeating this process up the hierarchy yields a total
+running time of $O(N+|S|)$. 
+
+Recall from Section~\ref{sec:simple} that the running time for route
+computation in the case of full-mesh iBGP, was $O(N+|R|^2)$, or
+$O(N+|S|)$.  Note that the algorithm for the case with route reflection
+has the {\em same} running time complexity as before; the running time
+for computing the outcome of BGP route selection is no more complex,
+even though the process for computing the outcome is more involved.
+In an iBGP topology with route reflection, the number of sessions,
+$|S|$, will actually be less than $|R|^2$; the running time of the
+algorithm in this section benefits from the fact that route reflectors
+reduce the number of sessions in the iBGP topology.
+
+
+%\subsection{Route Prediction with Route Reflection and MED}
+
+\subsection{Algorithm: Route Reflection, MED}\label{sec:rr_med}
+
+When a network uses both route reflection and MED, the graph walk
+algorithm in Figure~\ref{fig:best_ibgp} no longer works, because it
+relies on the fact that the routers that all routers will ultimately
+select a route in $\gamma(E)$.  In a network with route reflection {\em
+  and} MED, this
+is not always true, because when a router selects a locally best route, a
+route with a lower MED value might not be visible to that router.  As a
+result, some router in the AS might select an eBGP-learned route that is
+{\em worse}, according to the first four steps of the BGP decision
+process, than eBGP-learned routes selected by other routers!
+
+\begin{figure}[t]
+\centering\epsfig{file=figures/ibgp2.eps,width=0.5\linewidth}
+\caption{When an AS's iBGP topology uses route reflectors and MED, a
+  router may not always select a route in $\gamma(E)$. }
+\label{fig:ibgp2}
+\end{figure}
+
+
+Consider the example shown in Figure~\ref{fig:ibgp2}.  The network
+learns routes to some destination at routers $X$, $Y$, and $Z$ that are
+equally good up to MED comparison. All
+three routers are clients of the route reflector $RR$.  The
+routes at $X$ and $Y$ are learned from the same next-hop AS, and $r_Y$
+has a lower MED value.  One might think that router $X$ would never
+select route $a$, since, after all, it has a higher MED value than route
+$b$, but that is not the case in this figure: $RR$ learns routes $a$,
+$b$, and $c$, and selects route $c$ as its best route, because $c$ has
+the shortest IGP path cost.  Therefore, $X$ never learns route $b$!
+
+
+Note that applying the algorithm from
+Figure~\ref{fig:best_ibgp} does not correctly compute the outcome of the
+BGP decision process.  
+Proceeding up the hierarchy: (1)~routers $X$, $Y$, and $Z$ would select
+routes $a$, $b$, and $c$, respectively; (2)~$RR$ selects route $c$
+because it has a shortest IGP path; (3)~each router selects its own
+eBGP-learned route, since eBGP routes are preferred over iBGP routes.
+While the graph walk correctly computes the outcome in this case, a
+different IGP graph would produce a different result: if $RR$'s IGP path
+cost to $Y$ were less than that to $Z$, then $X$ would learn routes $a$
+and $b$, rather than $a$ and $c$, and it would ultimately select $b$,
+because of its lower MED value.  On the other hand, if $X$ had learned a
+second eBGP-learned route, $d$, that was {\em better} than $b$, but
+worse than $a$, then $X$ would ultimately select $d$, which is an
+eBGP-learned route but {\em not} its locally best eBGP route.
+
+To account for this, we apply the result from Lemma~\ref{l:elim} to
+derive the algorithm in Figure~\ref{fig:best_ibgp2}.  This algorithm
+also immediately eliminates all candidate routes that have a lower local
+preference, longer AS path, or higher origin type than other
+eBGP-learned routes, as in the algorithms from
+Figures~\ref{fig:b2_no_tot_order_2} and~\ref{fig:b2_no_tot_order}.  The
+algorithm repeatedly applies the graph walk from
+Figure~\ref{fig:best_ibgp2} and {\em eliminates} eBGP-learned routes
+from the set of candidate routes, $C$, when they are worse, according to
+MED, than some other route learned as a result of the graph walk.
+Similarly to the algorithm in Figure~\ref{fig:b2_no_tot_order}, the
+algorithm in Figure~\ref{fig:best_ibgp2} can be equated with iteratively
+restarting the activation sequence after eliminating routes from the
+system. 
+
+\begin{theorem}
+If a network uses route reflection, {\em and} routers cannot form a
+total ordering over all candidate routes, then the algorithm in
+Figure~\ref{fig:best_ibgp2} correctly computes the outcome of the BGP
+decision process, $b_r$, for all routers $r \in R$.
+\end{theorem}
+\vspace*{0.1in}
+
+\begin{proof}
+Consider the activation sequence where (1)~all routers select their
+locally best eBGP learned route and readvertise these routes via iBGP;
+(2)~every router compares their eBGP-learned routes with routes learned
+via iBGP.  
+
+From Theorem~\ref{t:exit}, we know that one iteration of the loop
+in Figure~\ref{fig:best_ibgp2} correctly computes the result of one
+iteration of this activation sequence.
+From Lemma~\ref{l:elim}, it is possible to eliminate 
+any locally best eBGP-learned routes that are eliminated by other routes
+in $B_i$, since those routes will never appear in a $B_j$ for any $j>i$,
+and restart the activation sequence with the smaller set of candidate
+routes.  The termination condition, $L = \phi$, corresponds to the
+condition that no router's best route changes as a result of applying
+the algorithm from Figure~\ref{fig:best_ibgp}, which will also result in
+no new iBGP messages being sent in the activation sequence.
+\end{proof}
+
+{\bf Computational Complexity.} 
+Sorting a total of $N$ routes locally at each router (to allow for
+  the application of $\lambda_r$) has $O(N \log N)$ running time.
+Each iteration has the
+following complexity: 
+\begin{enumerate}
+\itemsep=-1pt
+\item Once $B$ has been computed, executing the algorithm from
+  Figure~\ref{fig:best_ibgp} has complexity $O(|S|)$.
+\item Computing the set $L$ and eliminating those routes from the
+  candidate set requires a comparison at each router, which
+  has complexity $O(|R|)$.
+\end{enumerate}
+This loop executes a maximum of $N-1$ times, since, in the worst case,
+one route is eliminated at each iteration and the ultimate set $B$ has
+only a single route.  Therefore, the total running time is
+$O(N \log N + N|R| + N|S|))$.
+
+%What's surprising here is that the output of Figure 6, followed by a
+%graph walk, does not work.
+%% Logical extension here would be to first select the locally-best route
+%% at each router and then do the graph walk with those.  This approach
+%% won't necessarily work if that locally best route gets eliminated at a
+%% later point (e.g., by MED).  We need to go back and revisit that router
+%% if its route is eliminated. 
+
+\begin{figure}[t]
+\begin{small}
+\begin{center}
+\centering{\em Algorithm: Route Reflection, MED}
+\centering\framebox{
+\begin{minipage}{4in}
+\begin{tabbing}
+\hspace*{0.5cm}\=\hspace{0.5cm}\=\hspace{0.5cm}\=\hspace{0.3cm}\=
+\hspace{0.3cm}\=\hspace{0.3cm}\=\hspace{0.3cm}\=\hspace{0.3cm}\=\kill
+{\sc SelectBest\_eBGP\_MED\_RR}($E$, $R$)\\
+\> $C \leftarrow \sigma(E)$ \\
+\> {\bf do} \\
+\>\> $B \leftarrow \cup_r \lambda_r(C_r)$ \\
+\>\> {\sc SelectBest\_eBGP\_RR}$(B,R)$ \\
+\>\> $L \leftarrow \cup_{\{r | b_r \neq \lambda_r(E_r)\}}
+\lambda_r(E_r)$ \\
+\>\> $C \leftarrow C \setminus L$ \\
+\> {\bf while} $L \neq \phi$
+\end{tabbing}
+\end{minipage}
+}
+\end{center}
+\end{small}
+\caption{Efficiently computing the best route at each router in a
+  network with route reflection, where MED is only compared across
+  routes from the same AS.}
+\label{fig:best_ibgp2}
+\end{figure}
+
+
+
+%% This problem has a relatively simple solution: for each router, select
+%% the egress router that has an eBGP-learned route to the destination and
+%% has the shortest IGP distance from that router.  This approach correctly
+%% computes the outcome of BGP route selection
+%% as long as eBGP-speaking routers readvertise every eBGP-learned route
+%% to every router in the AS, as in a full-mesh iBGP configuration.  In
+%% this case, each router that was not assigned an eBGP-learned route need
+%% only apply $\lambda(B)$ locally to determine its egress point.
+
+%% \begin{theorem}
+%% Suppose an AS's iBGP topology forms a full mesh. Then, if each router in the AS
+%% that was not assigned an eBGP-learned route is assigned
+%% $b_r = \lambda(B)$, this outcome will agree with the BGP decision process.
+%% \end{theorem}
+
+%% \begin{proof}
+%% Consider the following activation sequence: 
+
+%% \begin{enumerate}
+%% \item Every eBGP-speaking router exchanges routes
+%%   (Section~\ref{sec:egress_set})  
+%% \item Every eBGP-speaking router $r$ that has at least one route in $B$ is
+%%   simultaneously activated and sends $b_r$ to all other routers via
+%%   iBGP. 
+%% \item Every router in the AS executes the decision process based on the
+%%   set of received routes.
+%% \end{enumerate}
+
+%% We now show that, if every router which was not assigned an eBGP-learned
+%% route simply applies $b_r = \lambda(B)$, the outcome will be equivalent
+%% to the above activation sequence.  
+%% First, note that because the iBGP topology
+%% forms a full mesh, every router learns every route in $B$ after step~2
+%% of the activation.  It remains to show that executing the decision
+%% process over $B$ at each remaining router produces the same outcome as
+%% applying $\lambda(B)$ locally at those routers.
+  
+%% Recall from Lemma~\ref{l:c2} and Theorem~\ref{t:ebgp} that all routes at
+%% routers that ultimately select an eBGP-learned 
+%% route are equally good up through step 4.  Hence, the
+%% routers that ultimately select an iBGP-learned route will select the
+%% route with the shortest IGP path to the next hop (Step~6), breaking ties
+%% using router ID.  
+%% But, from Theorem~\ref{t:ebgp}, we also know that all routes in $B$ are
+%% equally good through Step~4, so applying $\lambda(B)$ at router $r$, by
+%% definition, has the same effect as the IGP and router ID tiebreaking steps.
+
+%% The routers that ultimately select an eBGP-learned route (i.e., those
+%% with routes assigned at the end of the second phase) will not change
+%% their best routes after step~3 of the activation: since very route in
+%% $B$ is equally good up through the first 4 steps of the decision
+%% process, then every route that one of these routers selects will be
+%% worse than the route that it has already selected (i.e., because it will
+%% only learn routes via iBGP, which will be worse according to Step~5 of
+%% the decision process).
+%% %we 
+%% %know we can just 
+%% %apply a ranking, because each of these routers learn {\em all} of the
+%% %eBGP-learned routes.
+%% \end{proof}
+
+%% Even if an iBGP configuration is not a ``full mesh'' configuration,
+%% assigning egress routers using the algorithm above may produce the
+%% correct result.  For example, if the iBGP configuration satisfies the
+%% sufficient conditions for ``forwarding correctness'' discussed by
+%% Griffin {\em et al.}~\cite{wilfong:02}, each router should be able to
+%% simply select the route of its closest egress router.  Unfortunately,
+%% the sufficient conditions presented in this previous work are not always
+%% practical. 
+

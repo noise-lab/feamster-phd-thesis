@@ -1,0 +1,37 @@
+\centering
+\begin{pspicture}(8,3.5)
+%    \showgrid
+    \psset{nodesep=2pt, arrows=->}
+
+    \cnodeput(2.875,3.05){W}{$W$}
+    \cnodeput(6,2.1){Y}{$Y$}
+    \cnodeput(2,2.1){c1}{\hspace{0.12in}}
+    \cnodeput(3.75,2.1){c2}{$X$}%\hspace{0.12in}}
+    \cnodeput(6.875,1.15){c3}{$Z$}
+
+    \ncline{c1}{W}
+    \ncline{c2}{W}
+    \ncline{c3}{Y}
+
+    \psset{nodesep=2pt, arrows=-}
+    \ncline{c2}{Y}
+
+
+    \rput(2.875,4){\rnode{r1}{{\small route $r_1$ to $d$}}}
+    \rput(3.75,0.25){\rnode{r2}{{\small route $r_2$ to $d$}}}
+
+    \psset{nodesep=1pt, linestyle=dashed, arrows=<-}
+    \ncline{W}{r1}
+    \ncline{c2}{r2}%\rput(1.25,0.5){\rnode{w2}{$w_2$}}
+
+    \rput(4.55,3.25){\rnode{rrc}{{\small Route Reflector (RR)}}}
+    \rput(4.15,2.55){\rnode{rrc}{{\small Client}}}
+
+    \rput(6.5,2.35){\rnode{rrc}{{\small RR}}}
+    \rput(7.23,1.6){\rnode{rrc}{{\small Client}}}
+
+
+    \psframe[fillcolor=white,linestyle=dashed, framearc=0.3](1.25,0.75)(7.75, 3.5)
+
+
+\end{pspicture}

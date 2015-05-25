@@ -1,0 +1,425 @@
+%%%
+%%% validation.tex
+%%%
+
+\subsection{Validation}
+\label{sec:validation}
+%%%
+%%% Approach
+%%%
+%Ensuring that the emulator produces correct answers is important
+%because we envision operators using such a tool to evaluate potential
+%configuration changes in an operational network.  
+To verify that the emulator produces correct answers,
+we perform 
+validation using complete routing protocol implementations
+on production routers in a large operational network.  
+Network simulators do not capture the full
+details of the standard routing protocols, so it is not useful to
+compare the emulator's results with those of a simulator.  
+In addition, we may be 
+unaware of vendor-specific variations that could affect the accuracy
+of our results.  Since we cannot make arbitrary changes to deployed
+configurations on a live network,
+we run the emulator on individual snapshots derived from daily
+dumps of the router configuration files, BGP routing tables, and BGP 
+neighbor information and compare the emulator's route predictions to
+what was seen in practice.  For each phase of the algorithm, we compare 
+our results to actual BGP tables and present a breakdown of any 
+mismatches we encounter.  To isolate the sources of inaccuracy, we 
+evaluate each phase in Figure~\ref{fig:dataflow} independently, assuming
+perfect inputs from  
+the previous module; we also perform an end-to-end validation.
+
+The emulator generates correct results for more than $99\%$ of the 
+prefixes. Most mismatches can be attributed to the fact
+the data sets were collected at slightly different times.
+%This problem is unavoidable since process of ``dumping''
+%the network state occurs over a period of several hours, as polling
+%engines contact each router and download large quantities of data.
+%Inevitably, the network state will change during this period.
+%These inconsistencies are rare and do not significantly 
+%influence the accuracy of the emulation.
+%%%
+%%% Data
+%%%
+The analysis focuses on a snapshot of the network state from early
+morning (EST) on February 4, 2003.  We validate the prediction algorithm
+for the 91,554
+prefixes whose eBGP routes are
+learned at peering points to other large providers, since we have routing
+tables from all of these locations; we
+excluded prefixes that were learned at other routers.
+% for which we did not have routing
+%tables, such as customer routers. 
+%We focus
+%on these prefixes because we have routing tables for every router that
+%advertises these prefixes 
+(Recall that the prediction algorithm relies
+on knowing all of the potential egress routers where routes to a prefix
+are learned.)
+%We expect the results for the prefixes that we have excluded to be
+%comparable to those that we are able to validate. 
+%That is, we exclude the routes learned from customers and instead
+%focus on the routing of outbound traffic to the rest of the Internet.
+The initial BGP routing data consists of 1,620,061 eBGP-learned routes
+with 43,434 distinct AS paths.  We applied the tool
+to these inputs and checked whether the emulator produced the same
+answers that the operational routers selected.  In addition to
+collecting BGP routing tables from the peering routers (where the eBGP
+routes are learned), we also collected BGP tables from several 
+route reflectors and access routers to verify the results.
+
+\subsubsection{Applying Import Policy}
+To verify that the first phase correctly emulates the application of
+import policy, we need only compare the route attributes (\ie, local
+preference, MED, etc.) in the {\dfc modified routes} table to the
+actual BGP routing tables.  The {\dfc modified routes} table contains
+the routes with attributes modified by applying the import policies
+specified in the {\mf import} table to the initial {\mf known routes}
+table.  Because the prototype uses routing tables to approximate the
+actual routes received at each router in the AS, we cannot
+determine what routes were discarded by the import policy.  Thus, the
+emulator cannot emulate the filtering policies specified by import
+policies, but it can still determine the
+effects of import policy configurations that set or manipulate 
+route attributes (\eg, for traffic engineering).
+%The {\mf known routes} table contains only the eBGP-learned routes,
+%since subsequent modules emulate the behavior of iBGP.  In addition,
+%our analysis excludes the routes learned from customers since we
+%analyze data collected from the peering points.
+%J We can skip this point
+%we have Because subsequent modules emulate the behavior of iBGP, we do not need
+%to incorporate iBGP-learned routes.  The emulator could incorporate
+%customer routes, but we choose not to do so: because networks typically
+%(1) always prefer sending traffic through customers and (2) accept
+%whatever route attributes accompany the customer's route advertisements,
+%it is not reasonable to change import policy to affect traffic flow on
+%these routes.
+%
+
+\begin{table}
+\begin{center}
+{\small
+\begin{tabular}{r|r|p{0.825in}p{0.825in}|l}
+& {\em Number} & \parbox{0.825in}{{\em Attribute \\ Mismatch}} &
+  \parbox{0.825in}{{\em Unusual\\ Configuration}} & {\em Total Errors}
+  \\ \hline 
+%Routers & 2 & 2 & 4 & 28.57\% (4/14) \\ \hline
+AS Paths & 43,434 & 3 & 9 & 12 (0.028\%) \\ %\hline
+Routes & 1,620,061 & 36 & 277 & 313 (0.019\%) \\ %\hline
+\end{tabular}
+\vspace{-0.15in}
+}
+\end{center}
+\caption{Summary of errors in applying import policy.  
+%Most of the errors
+%  resulted from the fact that the prototype implementation does not
+%  currently handle a special configuration case.
+}
+\label{tab:mismatch_summary}
+\end{table}
+
+We compared the route attributes between the {\mfc known routes} and
+{\mfc modified routes} tables for all 1,620,061 eBGP routes
+with 43,434 distinct AS paths.
+% from 14 peering routers.  
+Table~\ref{tab:mismatch_summary} summarizes the results of our
+validation.  The emulator's results matched the route attributes seen in
+the BGP tables for all but 313 eBGP-learned routes on 
+12 distinct AS paths.  We observed 36 attribute mismatches over 3 AS
+paths, which can likely be attributed to actual policy changes, since
+the routing tables and the configuration files were captured at
+slightly different times of day; we verified this conclusion by
+inspecting the configuration data for the next day.  The remaining
+mismatches involved 9 unique AS paths because the prototype did not
+handle a complex configuration scenario permitted on Cisco routers.
+% (one route map used a \texttt{deny} statement when
+%in its \texttt{as-path access-list} statement, which the current
+% implementation of our prototype does not parse).  
+This accounted for 277 of the 313 route mismatches.
+Overall, the first phase produced successful results for more than
+99.97\% of the cases. 
+
+%This high success rate is expected: the only time we would expect to see
+%a mismatch between the emulation and the actual observed local
+%preference values would be if router configuration had changed between
+%the capture of the configuration file and the capture of the BGP table.
+
+\subsubsection{Computing the Set of Best eBGP Routes}
+
+
+\begin{table}
+\begin{center}
+{\small
+\begin{tabular}{r|r|rr|l}
+& {\em Number} & {\em Different} & {\em Missing} & {\em Total Errors}\\ \hline 
+AS Paths & 43,434 & 66 & 187 & 253 (0.582\%) \\ %\hline %/45922 
+Prefixes & 91,554 & 120 & 483 & 603 (0.659\%) \\ %\hline %/92348
+\end{tabular}
+\vspace{-0.15in}
+}
+\end{center}
+\caption{Mispredictions in the set of best eBGP routes.
+%  at network exit points.
+%  The table shows the number of best eBGP route predictions
+%  that did not agree with the route chosen by the corresponding route
+%  reflector.
+%  Most of the errors resulted from timing inconsistencies: instances
+%  where the BGP emulator predicted a route for a prefix that did not
+%  exist in the route reflector tables.
+} 
+\label{tab:mismatch_summary_box2}
+\end{table}
+
+%As discussed in Section~\ref{sec:best_exit}, the module that computes
+%the best routes at network exist points computes a function that maps a
+%prefix to a set of possible egress points (\ie, next-hop IP addresses),
+%where each egress point corresponds to some route heard at one of the
+%domain's border routers.  To validate this computation, we must
+%determine whether the best route that this module has predicted at the
+%network exit point is the same as the best route that was actually
+%selected at that network exit point.  
+
+%To validate the computation of the set of best eBGP routes, 
+%we compare
+%the results 
+%of the second module with the best routes selected at each top-level
+%route reflector in the operational network. 
+%To verify that the best eBGP routes computed by the emulator were the
+%same as those computed as the actual set of best eBGP routes, we
+%compared each route in the set of best eBGP routes with the
+%corresponding routing table entry at the nearest RR.  
+To verify that the second phase correctly computes the set of best eBGP
+routes, 
+we check that the best route at each eBGP-speaking router as specified by
+the {\dfc egress points} table corresponds to the route that appears in
+the routing table of that router's route reflectors. 
+These routes
+match the vast majority of the time.  However, in a few cases, the two
+routers had different routes (\ie, with different AS paths), even
+though one router apparently learned the route directly from the
+other; these results are summarized in the ``Different'' column in
+Table~\ref{tab:mismatch_summary_box2}.  The ``Missing'' column
+highlights cases where the route reflector did not have {\em any\/}
+route for that 
+prefix.  Timing inconsistencies can explain both scenarios, which
+together account for just over 0.5\% of the cases.
+
+%Next, we checked that each RR selected a best route that appeared in
+%the set of best eBGP routes by the emulator.  
+To verify that the emulator does not incorrectly exclude routes from the
+set of best eBGP routes, we check that, for each prefix, the best route
+at each route reflector appears in the set of best eBGP routes as computed by
+the emulator\footnote{The reverse is not necessarily true.  An
+egress point may have a larger IGP path cost to each
+of the top-level route reflectors for certain sets of eBGP routes.}.
+In other words, we consider
+cases where a route reflector's best route would have directed traffic towards
+some egress router that was not contained in the {\dfc egress points}
+table.  Only 1.11\% of best routes at route reflectors 
+% (4,945 of 1,295,009 best routes) 
+% (14,480 of 1,295,009 best routes) 
+% (4,945 of 1,295,009 best routes) 
+for 2\% of prefixes 
+%(1,871 of 91,554 prefixes) 
+%(1,216 of 91,252 prefixes)  --old
+fell into this category.  %Examination of these anomalies suggests that
+Routing dynamics can explain these inconsistencies---through
+manual inspection, we found that, in many cases, the best route at the
+RR was clearly worse than the routes in the set of best eBGP routes
+(\eg, the route reflector's best route had the same local preference but a higher
+AS path length).  
+%Often, the corresponding egress router's BGP table
+%had a different route (\eg, with a higher local preference, shorter
+%AS path, etc.).
+%, consistent with the ``Different'' case in
+%Table~\ref{tab:mismatch_summary_box2}.
+
+\subsubsection{Computing the Best Route at Each Router}
+
+%In this section, we describe the validation of the third module, which
+%computes the best egress router, given an ingress router and a
+%destination prefix. We also discuss mispredictions made by the
+%third module, and account for these errors.
+
+To verify that the emulator correctly predicts the best egress
+router, we examined the best routes in BGP tables at several routers and
+compared the (destination prefix, 
+next-hop) pair from the routing table with the results in the {\df
+predicted routes} table entry for that router.  
+%We performed these comparisons at four different routers in the network.
+We performed these comparisons at two
+access routers that connected directly to
+customers in different 
+geographic locations
+to verify that the emulator makes correct predictions at ingress
+routers.  We also analyzed the emulator's predictions at two route
+reflectors to verify that the algorithm makes correct route predictions
+as it traverses the signaling graph.
+%
+%The routing tables we use for verification are collected from route
+%reflectors and access routers within the AT\&T network. While access
+%routers, which receive traffic entering the network from customers,
+%are clearly ingress routers, this classification does not quite fit
+%for route reflectors. Though not a ingress router, a route reflector
+%serves the same value for validation as the access routers. Recall
+%that we are focusing on prefixes advertised to AT\&T on eBGP sessions
+%with peering ASes. As route reflectors and access routers are internal
+%to the network, their best next hop for these external prefixes, will
+%be the AT\&T eBGP router that learned of the prefix from the peer
+%AS. The advertisements for these prefixes are propagated through iBGP
+%sessions from the eBGP router to internal routers, such as route
+%reflectors and access routers. The routing tables of these two types
+%of routers are therefore perfect candidates for validating the third
+%module, as they will test that the module correctly emulates the
+%interaction between eBGP learned routes, and the iBGP topology and IGP
+%configuration.
+The best route matched our prediction for 99.5-99.7\% of the cases, as
+summarized in Table~\ref{tab:predictions_summary}.  At each router, 
+we excluded prefixes if the best egress router was not one of
+the peering routers included in the {\mfc known routes} table (recall
+that we excluded routers for which we did not have routing tables%, such
+%as customer routers
+). In these cases, we cannot evaluate whether the
+algorithm would have made the correct prediction because we didn't
+have the routes from that egress router in the first place.
+
+%{\em Case 1:} The destination prefix at the ingress router does not
+%  appear in the {\df known routes} table, causing the emulator to
+%  predict an empty egress set. 
+
+
+We classify the
+errors among the remaining prefixes in terms of three cases:
+%We have classified the mismatches into four cases, where the first three 
+%described below. The first three cases directly show that the error
+%resulted from timing inconsistencies between routing table data. This
+%is likely the explanation for the errors in case 4 as well. 
+{\em Case 1:} The route at the ingress router does not appear in
+  the {\dfc modified routes} table and, as such, does not appear in the
+  egress set. 
+{\em Case 2:} The route at the ingress router appears in the
+  {\dfc modified routes} table but does not appear in the {\dfc egress
+    points} table.  
+{\em Case 3:} The misprediction has no obvious explanation.
+%Other misprediction. Again, these errors are likely
+%caused by the variable nature of BGP routing state in the network. For
+%example, the best egress router predicted by the emulator, may have
+%been unavailable to the router being validated, due to a route withdrawal.
+
+Case 1 errors likely result from timing inconsistencies, where the best
+route at the ingress router did not exist at the egress router when the
+routing tables were dumped.  Timing inconsistencies can also explain
+Case 2 errors: for example, an ingress router or a route reflector could
+have a route that is no longer one of the best eBGP-learned routes, which
+could happen if a better route arrived at an eBGP-speaking router but
+had not yet propagated to other routers in the AS.  We are unable to
+explain only 0.05\% of the errors.
+
+\begin{table}
+\begin{center}
+{\small
+\begin{tabular}{r|r|rrr|l}
+{\em Router} & {\em \# Predictions}
+& {\em Case 1} & {\em Case 2}
+& {\em Case 3} & {\em Total Errors} \\ \hline 
+
+RR1 &   88,865&  33&  322& 21 &  376 (0.423\%)   \\ %\hline
+RR2 &   88,164&  33&  185&  5 &  223 (0.253\%)   \\ %\hline
+AR1 &   88,165&  38&  178&  5 &  221 (0.251\%)    \\ %\hline
+AR2 &   76,547& 151&  170& 37 &  358 (0.468\%)   \\ %\hline
+\end{tabular}
+\vspace{-0.15in}
+}
+\end{center}
+\caption{Errors in predicting the best egress router.
+  Prefixes predicted incorrectly by the second phase and those where
+  the ``right'' answer was not a peering router are excluded.
+%from inside the network. 
+%Shown are the number of predictions that do not
+%correspond to the best egress router from the BGP routing table. 
+%The 603
+%prefixes that were incorrectly predicted by the second module are
+%excluded.  XXX Fix this table and discussion. XXX
+%Cases
+%1-3 result from timing inconsistencies. Errors in case 4 may also relate 
+%to inconsistent data.
+} 
+\label{tab:predictions_summary}
+\end{table}
+
+\subsubsection{End-to-End Validation}
+\begin{table}
+\begin{center}
+
+{\small
+\begin{tabular}{r|r|rrr|l}
+{\em Router} & {\em \# Predictions}
+& {\em Case 1} & {\em Case 2}
+& {\em Case 3} & {\em Total Errors} \\ \hline 
+
+RR1 &   89,343&  40&  459& 55 &  554 (0.620\%)   \\ %\hline
+RR2 &   88,647&  39&  314& 41 &  394 (0.444\%)   \\ %\hline
+AR1 &   88,649&  44&  307& 40 &  391 (0.441\%)    \\% \hline
+AR2 &   76,733& 157&  283& 71 &  511 (0.666\%)   \\ %\hline
+\end{tabular}
+\vspace{-0.15in}
+}
+\end{center}
+\caption{Summary of errors for end-to-end validation.} 
+\label{tab:e2e_summary}
+\end{table}
+
+We performed an end-to-end validation to study the effect of error
+propagation on the best routes ultimately predicted by the emulator.
+We compared the emulator's prediction with the same four routing
+tables used for the validation of the third module, with the exception
+that the input included the errors from the first two modules.  At
+these four routers, the emulator predicted the correct routes for more
+than 99\% of all prefixes, as summarized in Table~\ref{tab:e2e_summary}.
+%
+We hypothesized that the majority of the mispredicted routes could be
+explained by the dynamics of the input data.  
+%A modification to the import policy could have changed the choice of
+%best route between the time the two routing tables were captured.  A
+%more likely explanation is that the inconsistencies were caused by
+%routing dynamics that caused the temporary appearance or disappearance
+%of a route.
+For example, if the best route at an eBGP-speaking router were
+temporarily withdrawn at the time that the route reflector table was
+captured, inconsistencies between routing tables could
+arise\footnote{To evaluate our hypothesis, we analyzed a feed of iBGP
+update messages collected on the same day.  More than 45\% of the
+prefixes with incorrect predictions had a BGP routing change during
+the data collection period at the same router where the apparent
+mismatch occurred, and 83\% of the prefixes experienced an update at
+some router in the AS during this period.}.
+%Would be good to report the percent of *all* prefixes
+%that had an update during that period, to illustrate that the
+%mismatches are unusual in terms of having more updates (assuming that
+%this is true).
+
+These results suggest that the algorithm we have proposed is accurate:
+prediction errors are infrequent and result mainly 
+the dynamics of the inputs.  Since most prefixes whose routes change
+frequently do not receive much traffic~\cite{Rexford:stability2002}, these
+inconsistencies would certainly not prevent the emulator from
+being used for traffic engineering tasks.
+%Ideally, the emulator would receive a real-time stream of all of the
+%eBGP-learned routes.  However, this is not currently possible because
+%commercial routers only support either (1)~dumping the entire BGP
+%table (which contains all of the routes after import processing, but
+%imposes a load on the router and provides only a static view) or
+%(2)~having a BGP session to a monitor (which provides a real-time view
+%of only the current best routes after import processing).
+
+
+
+
+
+
+
+
+
+

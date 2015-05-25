@@ -1,0 +1,37 @@
+\centering
+\begin{pspicture}(8,3.5)
+%    \showgrid
+    \psset{nodesep=2pt, arrows=<->}
+
+    \cnodeput(2,2.75){WC1}{$WC_1$}
+    \cnodeput(1,1.6){WC2}{$WC_2$}
+    \cnodeput(3,1.35){WC3}{$WC_3$}
+    \cnodeput(6.25,2.75){EC1}{$EC_1$}
+
+
+    \ncline{WC1}{WC2}
+    \ncline{WC2}{WC3}
+    \ncline{WC3}{WC1}
+
+    \ncline{WC1}{EC1}
+    \ncline{WC2}{EC1}
+    \ncline{WC3}{EC1}
+
+    \rput(1,0){\rnode{pw2}{}}
+    \rput(3,0){\rnode{pw3}{}}
+    \rput(6.25,0){\rnode{pe1}{}}
+
+
+    \psset{nodesep=2pt, linestyle=dotted, arrows=<->}
+    \ncline{WC2}{pw2}\rput(1.25,0.5){\rnode{w2}{$w_2$}}
+    \ncline{WC3}{pw3}\rput(3.25,0.5){\rnode{w3}{$w_3$}}
+    \ncline{EC1}{pe1}\rput(6.5,0.5){\rnode{e1}{$e_1$}}
+
+
+
+    \psset{nodesep=0pt, arrows=-}
+
+    \psframe[fillcolor=white,linestyle=dashed, framearc=0.3](0.25,0.75)(7.5, 3.5)
+
+
+\end{pspicture}

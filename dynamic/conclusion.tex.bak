@@ -1,0 +1,52 @@
+\section{Conclusion and Future Work}
+\label{sec:concl}
+
+Contractual peering agreements often require that two ASes advertise
+consistent routes at all peering points. 
+%Unfortunately, because today's
+%commercial routers do not provide a feed of all eBGP-learned routes,
+%network, detecting inconsistent route
+%advertisements from peers is extremely challenging, making it difficult
+%to enforce these 
+%contractual requirements.  This paper formalizes the problem of
+%detecting inconsistent advertisements and proposes two algorithms to
+%detect inconsistent route advertisements from peers:
+%Section~\ref{sec:problem} proposes an algorithm that requires access to
+%the complete set of eBGP-learned routes from a peer, which is not
+%readily available today; the algorithm we propose in
+%Section~\ref{sec:algo} can, in most circumstances, detect
+%inconsistent route advertisements given only access to iBGP feeds from
+%the local AS's border routers and the local routing policy.
+Today, ASes can use the algorithm that we propose in
+Section~\ref{sec:algo} to detect inconsistent route advertisements
+from neighboring ASes, as long
+as the AS's import policies satisfy the conditions we proposed.  We note
+that, for load balancing purposes, import policies that 
+set local preference values based on AS path {\em length}, rather than on
+specific ASes in the path, allow the inference algorithm in
+Section~\ref{sec:algo} to be applied.   Although import policies based
+on AS path length usually provide sufficient
+flexibility for performing traffic engineering~\cite{feamster03:ccr}, import
+policies based on AS path length are occasionally insufficient.
+In cases where an AS must use these types of import policies,
+detection of inconsistent route advertisements requires complete access to
+all of the eBGP routes advertised from that peer; router vendors should add
+support for monitoring all eBGP-learned routes learned by an AS's border
+routers.
+
+The algorithms we propose can also be used in conjunction with
+router configuration and iBGP data to validate previous studies on cold
+potato routing (e.g., ~\cite{spring:03}). Cold potato routing must
+be caused by either local import policy or inconsistent route
+advertisements.  With access to an AS's router configurations and iBGP
+routing data, we can verify these empirical measurements by examining an
+AS's import policies and applying our proposed algorithm for detecting
+inconsistent route advertisements.  We intend to explore this further in
+our future work. 
+
+
+%(i) policies that are invertible and based only on hop count (CCR
+%paper shows this is often enough flexibility).  (ii) BMP, since
+%sometimes you just gotta have weird policies
+%The algorithm for detecting inconsistent advertisements given the
+%ability to see all of the 

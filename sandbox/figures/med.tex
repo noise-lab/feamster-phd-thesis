@@ -1,0 +1,42 @@
+\documentclass{article}
+\usepackage{pst-all,color}
+
+\begin{document}
+
+\newpsobject{showgrid}{psgrid}{subgriddiv=2,griddots=10,gridlabels=6pt}
+\pagestyle{empty}
+\centering
+%  \begin{tiny}
+    \begin{pspicture}(8,4.5)
+%    \showgrid
+    \cnodeput(3,1.75){A}{$X$}
+    \cnodeput(5,1.75){B}{$Y$}
+    \cnodeput(1.25,3.75){C}{{\em AS 1}}
+    \cnodeput(6.5,3.75){D}{{\em AS 2}}
+
+    \rput(2.9,2.2){\rnode{1}{{\tiny 2}}}
+    \rput(3.5,2.2){\rnode{2}{{\tiny 1}}}
+    \rput(4.5,2.2){\rnode{1}{{\tiny 2}}}
+    \rput(5.1,2.2){\rnode{2}{{\tiny 1}}}
+
+    \rput(0.6,2.8){\rnode{a}{\parbox{1in}{\flushright $a$\\{\footnotesize MED: 2}}}}
+    \rput(3.8,3.5){\rnode{b}{\parbox{1in}{$b$\\{\footnotesize MED: 1}}}}
+    \rput(3.85,3.6){\rnode{c}{\parbox{1in}{\flushright
+    $c$\\{\footnotesize MED: 20}}}}
+    \rput(7.5,2.7){\rnode{b}{\parbox{1in}{$d$\\{\footnotesize MED: 10}}}}
+
+
+    \psset{nodesep=2pt, arrows=->}
+    \ncline{O}{C}
+    \ncline{O}{D}
+    \ncline{C}{A}
+    \ncline{C}{B}
+    \ncline{D}{A}
+    \ncline{D}{B}
+    \ncline[nodesep=0pt,arrows=-,linestyle=dashed]{A}{B}
+    \ncput*{{\tiny iBGP}}
+    \rput(4.05,1.25){\rnode{as_1}{{\em AS 3}}}
+    \ncbox[linestyle=dashed,linearc=0.2,nodesep=0.25cm,boxsize=0.7]{A}{B}
+    \ncline{as_1}{E}
+    \end{pspicture}
+\end{document}

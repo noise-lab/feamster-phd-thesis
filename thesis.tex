@@ -1,0 +1,158 @@
+%% The documentclass options along with the pagestyle can be used to generate
+%% a technical report, a draft copy, or a regular thesis.  You may need to
+%% re-specify the pagestyle after you \include  cover.tex.  For more
+%% information, see the first few lines of mitthesis.cls. 
+
+\documentclass[11pt,singlespace,twoside]{mitthesis}
+\usepackage{epsfig}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{arydshln}
+\usepackage{subfigure}
+\usepackage{psfrag}
+\usepackage[usenames]{color}
+
+% Compact itemize and enumerate.  Note that they use the same counters and
+% symbols as the usual itemize and enumerate environments.
+\def\compactify{\itemsep=0pt \topsep=0pt \partopsep=0pt \parsep=0pt}
+\let\latexusecounter=\usecounter
+\newenvironment{CompactItemize}
+  {\def\usecounter{\compactify\latexusecounter}
+   \begin{itemize}}
+  {\end{itemize}\let\usecounter=\latexusecounter}
+\newenvironment{CompactEnumerate}
+  {\def\usecounter{\compactify\latexusecounter}
+   \begin{enumerate}}
+  {\end{enumerate}\let\usecounter=\latexusecounter}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Other useful macros
+\newcommand{\eas}{{\em et al.\ }}
+\newcommand{\ea}{{\em et al.~}}
+\newcommand{\eans}{{\em et al.}}
+\newcommand{\ie}{{\em i.e.}}
+\newcommand{\eg}{{\em e.g.}}
+\newcommand{\rcc}{\textit{rcc~}}
+\newcommand{\rccns}{\textit{rcc}}
+\newcommand{\rccl}{{\large\textsf{rcc~}}}
+
+\newcommand{\abs}[1]{\ensuremath{\left|#1\right|}}
+\newcommand{\union}{\ensuremath{\bigcup}}
+\newcommand{\comps}{\ensuremath{\mathbb{C}}}
+\newcommand{\reals}{\ensuremath{\mathbb{R}}}
+\newcommand{\ints}{\ensuremath{\mathbb{Z}}}
+\newcommand{\ri}{\ensuremath{\operatorname{ri}}}
+\newcommand{\Var}{\ensuremath{\mathrm{Var}}}
+\newcommand{\E}{\ensuremath{\mathbb{E}}}
+\newcommand{\C}{\ensuremath{\mathcal{C}}}
+\newcommand{\R}{\ensuremath{\mathcal{R}}}
+\newcommand{\disp}[1]{\ensuremath{\displaystyle{#1}}}
+\newcommand{\eps}{\varepsilon}
+\renewcommand{\epsilon}{\varepsilon}
+\renewcommand{\v}[1]{\ensuremath{\boldsymbol{#1}}}
+\renewcommand{\b}[1]{\ensuremath{\overline{#1}}}
+\newcommand{\A}{\ensuremath{\mathcal{A}}}
+\renewcommand{\P}{\ensuremath{\mathcal{P}}}
+\newcommand{\F}{\ensuremath{\mathcal{F}}}
+\newcommand{\G}{\ensuremath{\mathcal{G}}}
+\newcommand{\I}{\ensuremath{\mathcal{I}}}
+\newcommand{\choices}{\ensuremath{\operatorname{choices}}}
+\newcommand{\period}{\ensuremath{\operatorname{period}}}
+\newcommand{\length}{\ensuremath{\operatorname{length}}}
+\renewcommand{\Re}{\ensuremath{\operatorname{Re}}}
+\newcommand{\lb}{\linebreak}
+\newcommand{\B}{\bullet}
+
+\newfont{\tf}{phvro at 10pt}
+\newfont{\tft}{phvro at 10pt}
+\newfont{\dfc}{phvrc at 11pt}
+\newfont{\mfc}{phvro at 10pt}
+\newfont{\emc}{pagk at 8pt}
+\newfont{\df}{phvrc at 10pt}
+\newfont{\mf}{phvro at 10pt}
+
+
+\newcommand{\com}[1]{}
+\def\xxx#1{\reversemarginpar \marginpar{\em #1}}
+
+
+% Keep LaTeX from putting figures on thier own page
+\renewcommand{\floatpagefraction}{0.75}
+
+\begin{document}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% New Environments
+
+\newtheorem{defn}{Definition}[chapter]
+\newtheorem{prop}{Proposition}[chapter]
+\newtheorem{assumption}{Assumption}[chapter]
+\newtheorem{constraint}{Constraint}[chapter]
+\newtheorem{observation}{Observation}[chapter]
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}{Lemma}[chapter]
+\newtheorem{corollary}{Corollary}[chapter]
+\newtheorem{property}{Property}[chapter]
+
+
+\def\proof{\vspace{0.05in}\par\noindent{\it Proof}. \ignorespaces}
+\def\endproof{{\ 
+\hfill$\blacksquare$
+}
+\par\vspace{0.2 in}}
+
+\def\proofsketch{\vspace{0.05in}\par\noindent{\it Proof Sketch}. \ignorespaces}
+\def\endproofsketch{{\ 
+\hfill$\blacksquare$
+}
+\par\vspace{0.2 in}}
+
+
+\newenvironment{example}[1][\relax]{\refstepcounter{example}\begin{list}%
+ {}{\leftmargin 0pt\rightmargin 0pt\labelsep 3pt\parsep 0pt%
+ \setlength{\listparindent}{\parindent}}
+    \item {\bf Example \thechapter.\theexample #1}\ }{\hspace*{\fill}$\blacksquare$\end{list}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\include{cover}
+\include{acknowledgements}
+\include{contents}
+
+
+\setlength{\parindent}{0.2 in}
+\setlength{\parskip}{0em}
+\setlength{\marginparwidth}{1in}
+
+
+\begin{sloppypar}
+\include{intro}
+\setcounter{chapter}{1}
+\include{related}
+\include{rlogic}
+\include{rcc}
+\include{sandbox}
+\include{policy}
+\include{concl}
+\end{sloppypar}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{flushleft}
+\bibliographystyle{abbrv}
+\rhead[\fancyplain{}{}]{\fancyplain{}{\sfb\thepage}}
+\lhead[\fancyplain{}{\sfb\thepage}]{\fancyplain{}{}}
+\cleardoublepage
+\rhead[\fancyplain{}{\sfeight\MakeUppercase{\bibname}}]{\fancyplain{}{\sfb\thepage}}
+\lhead[\fancyplain{}{\sfb\thepage}]{\fancyplain{}{\sfeight\MakeUppercase{\bibname}}}
+%\addcontentsline{toc}{chapter}{\bibname}
+\bibliography{ref,rfc}
+
+\end{flushleft}
+
+\end{document}
+

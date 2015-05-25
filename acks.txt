@@ -1,0 +1,144 @@
+Advisor-types:
+Hari Balakrishnan
+Jennifer Rexford
+
+-------------
+
+Committee:
+Frans Kaashoek
+David Clark
+Ramesh Johari (almost)
+
+-------------
+
+MIT Professors:
+John Guttag
+David Karger
+Daniel Jackson
+Dina Katabi
+Sam Madden
+Robert Morris
+Ron Rivest
+Barbara Liskov
+
+-------------
+
+Friends/Colleagues:
+David Andersen
+Mike Freedman
+Anukool Lakhina
+
+Renata Teixeira
+Aman Shaikh
+Ratul Mahajan
+Aditya Akella
+Joel Sommers
+
+-------------
+
+Colleagues:
+Alex Snoeren
+Randy Bush
+Avi Freedman
+kc claffy
+Olivier Bonaventure
+Tim Griffin
+Lixin Gao
+Joan Feigenbaum
+Morley Mao
+Richard Mortier
+Anthony Joseph
+
+Susie Wee
+John Apostolopoulous
+
+------------
+
+Friends:
+Ajay Kulkarni
+Sean Montgomery
+Greg Harfst
+---
+Claire Monteleoni
+Jennifer Bowen
+Jonathan Hall
+Kelly Carleton
+Jamie Fine
+Ann Vilasuso
+
+-------------
+
+Labmates:
+Magdalena Balazinska
+Jaeyeon Jung
+---
+Michel Goraczko
+Dorothy Curtis
+---
+Doug DeCouto
+Steven Richman
+Rodrigo Rodrigues
+---
+Mythili Vutukuru
+Winston Wang
+Deepak Bansal
+Mike Walfish
+---
+Bodhi Priyantha
+Suchi Raman
+---
+Srikanth Kandula
+Hariharan Rahul
+Nate Kushman
+Xiaowei Yang
+---
+Jeremy Stribling
+Max Krohn
+Frank Dabek
+Kevin Fu
+Emil Sit
+Athicha
+Jinyang Li
+John Jannotti
+Todd Nightingale
+Sidney Chang
+Peter Yang
+Bret Hull
+Vladimir Bychkovsky
+Allen Miu
+Godfrey Tan
+Dan Abadi
+---
+Sheila Marian
+
+
+-------------
+
+AT&T:
+Albert Greenberg
+Kobus van der Merwe
+Fred True
+Rick Greer
+
+-------------
+
+Squash:
+Sanmay Das
+Tony Ezzat
+Jose Rafael Galvanis
+
+Cycling:
+Alex Yip
+Thomer Gil
+Dye-Zone Chen
+Caitlin Bever
+Jason Sears
+Isaac Dancy
+Stan ...?
+
+------------
+
+Family:
+Mom/Dad
+Nancy/Michael
+Grandmother

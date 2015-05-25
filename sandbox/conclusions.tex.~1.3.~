@@ -1,0 +1,74 @@
+%%%
+%%% conclusions.tex
+%%%
+
+\section{Summary}
+\label{sec:sandbox_concl}
+
+To perform everyday network engineering tasks effectively, efficiently,
+and with minimal unnecessary changes to the live network, 
+operators need a way to model how a routing protocol
+configuration will behave before deploying that configuration.  
+The model we have presented is a necessary step for advancing the state
+of the art of network engineering.
+%, because it allows network operators (and protocol designers) to {\em
+%reason} about BGP's behavior, rather than blindly tweaking the
+%protocol with no understanding of the complex dynamics and protocol
+%interactions.  
+We believe that our model and BGP emulation tool present several
+immediate possibilities for future work.  First, network-wide BGP
+route prediction could be combined with traffic measurements to help
+network operators select BGP configuration changes that achieve
+various traffic engineering tasks.  Second, the emulator could be
+combined with higher-level mechanisms that spot misconfiguration or
+check that other constraints, such as robustness, are
+satisfied~\cite{Feamster2004h}.
+
+Although the diagram in Figure~\ref{fig:modules} shows only three
+stages, we envision that network operators could incorporate other
+phases.  For example, another phase could
+combine the predicted forwarding paths with traffic data to predict
+the load on each link in the network.  Using the model for traffic
+engineering assumes that traffic volumes are relatively stable, and
+that they remain stable in response to configuration changes.  In
+previous work, we found that prefixes responsible for large amounts of
+traffic have relatively stable traffic volumes over long
+timescales~\cite{Feamster2003e}.  Operators could use the routing model to
+test configuration changes on reasonably slow timescales that affect
+prefixes with stable traffic volumes.  A network operator could also
+combine measurements or estimates of the traffic arriving at each
+ingress router for each destination prefix~\cite{Feldmann2001b} with the
+link-level paths to predict the load on each link in the network.
+Another phase might evaluate the optimality of the these link-level
+paths in terms of propagation delay or link utilization and could
+search for good configuration changes before applying them on a live
+network.
+
+Finally, we note that modeling BGP routing is much more difficult than
+it should be.  In the future, we hope that routing protocol designers
+will consider ease of modeling as a design goal; as we describe in
+Section~\ref{sec:discussion}, some of these simplifications that aid
+protocol modeling also fix problems with protocol {\em operation}.
+Routing protocols that are easy to model and reason about will make
+everyday network engineering tasks more tractable.
+
+
+%% The prototype depends on many inputs including router 
+%% configuration files, BGP table dumps, and BGP session information 
+%% for every BGP-speaking router in the AS.  In reality, operators may not 
+%% have access to all of these inputs, and some inputs may be incomplete 
+%% or out-of-date.  Producing approximate results in the absence of  
+%% complete information is a promising area for future work.
+
+%In this section, we describe how
+%operators can improvise in the face of incomplete or missing inputs.
+%% The import policy application module relies on router configuration
+%% files and a priori knowledge of what updates will be advertised via eBGP
+%% from neighboring AS's.  Because the latter is impossible to know, we
+%% approximate this using the externally learned routes in the BGP table
+%% dumps (including alternate routes).  When some, but not all, routing
+%% tables are available, it may be possible to approximate the missing
+%% routing tables given knowledge of the other routing tables.  For
+%% example, one simplifying assumption that may be valid for many networks
+%% is to assume that all eBGP-speaking routers hear the same routing
+%% advertisements.  \textbf{XXX how valid is this assumption?}

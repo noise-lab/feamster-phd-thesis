@@ -1,0 +1,167 @@
+****************************************
+/home/feamster/bgpte/doc/ton2004/paper.bib:
+bonaventure:04 -> bonaventure2004
+feamster2004:whatif -> Feamster2004
+
+****************************************
+/home/feamster/bgp/doc/sigcomm05/paper.bib:
+Aiello2003
+Feamster03:ccr -> Feamster2003e
+Feamster03:logic -> Feamster2003b
+Feigenbaum2002
+Gouda2003
+Handley02:xorp -> Handley2002
+Machiraju2004
+Sami04 -> Sami2004
+Shaikh2004
+Sobrinho2003
+agarwal:03 -> Agarwal2003
+basu:02 -> Basu2002
+bgp-id -> id-bgp4
+bush:privcomm
+determed -> www-cisco-determed
+draves:99 -> draves99
+forces-wg
+gao:01a -> Gao2001a
+goodell:2003 -> Goodell2003
+griffin:02 -> Griffin2002b
+jaggard2004
+labovitz:01 -> labovitz:ton01
+labovitz:99a -> labovitz99
+mahajan04 -> mahajan2004
+mao:02 -> Mao2002
+mao:03 -> Mao2003
+ncp1 -> Horing82
+ncp2 -> Lawser82
+netscope:00 -> Feldmann2000
+omni -> Teixeira2004
+rcc-tr -> Feamster2004h
+rcp -> feamster:fdna2004
+rcp-tr -> Caesar2004
+rfc1863
+rfc1998
+rfc3746
+routing-service -> Lakshminarayanan2004
+stable:02 -> Rexford:stability2002
+tdemand:02 -> Feldmann2001b
+teixeira:04 -> teixeira2004b
+whatif -> Feamster2004
+wilfong:02 -> Griffin2002
+Clark:02 -> clark2002
+Govindan:98 -> Govindan1998
+Govindan:99 -> Govindan1999
+Griffin:00 -> Griffin2000
+Varadhan:96 -> Varadhan1996,Varadhan2000
+
+****************************************
+/home/feamster/bgpte/doc/icnp2003/paper.bib:
+shiv-ols -> Ye2003
+
+****************************************
+/home/feamster/bgp/doc/nsdi2005/ref.bib:
+aol -> www-aol
+
+****************************************
+/home/feamster/cvs/peerScope/doc/IMC2004/paper.bib:
+nanog-consistent
+spring:03 -> spring2003
+
+
+************************************************************
+
+1:28pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/Feamster03:ccr/Feamster2003e/'
+find . -name '*tex' | xargs perl -p -i -e 's/Feamster03:ccr/Feamster2003e/'
+1:28pm:[1mginseng[0;10m:thesis%find . -name '*tex' | xargs grep Feamster03:ccr
+find . -name '*tex' | xargs grep Feamster03:ccr
+1:28pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs grep Feamster2003e
+find . -name '*tex' | xargs grep Feamster2003e
+./sandbox/introduction.tex:learned at other routers~\cite{Feamster2003e}.  Changing the import
+./sandbox/setup.tex:timescales~\cite{Feamster2003e}.  Operators could use the routing model to
+./related.tex:engineering techniques offline~\cite{Feamster2003e}.  
+./dynamic/conclusion.tex:flexibility for performing traffic engineering~\cite{Feamster2003e}, import
+./rcp/introduction.tex:%% individual routers~\cite{Feamster2003e}, 
+./rcp/strawman.tex:some egress points less attractive than others~\cite{Feamster2003e}.
+./rcp/strawman.tex:traffic from one inter-AS link to another requires~\cite{Feamster2003e}:
+./rcp/architecture.tex:%engineering~\cite{Feamster2003e}.
+1:29pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/Feamster03:logic/Feamster2003b/'
+find . -name '*tex' | xargs perl -p -i -e 's/Feamster03:logic/Feamster2003b/'
+1:29pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/Handley02:xorp/Handley2002/'
+find . -name '*tex' | xargs perl -p -i -e 's/Handley02:xorp/Handley2002/'
+1:36pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/Sami04/Sami2004/'
+find . -name '*tex' | xargs perl -p -i -e 's/Sami04/Sami2004/'
+1:36pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/agarwal:03/Agarwal2003/'
+find . -name '*tex' | xargs perl -p -i -e 's/agarwal:03/Agarwal2003/'
+1:38pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/basu:02/Basu2002/'
+find . -name '*tex' | xargs perl -p -i -e 's/basu:02/Basu2002/'
+1:39pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/bgp-id/id-bgp4/'
+find . -name '*tex' | xargs perl -p -i -e 's/bgp-id/id-bgp4/'
+1:40pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/determed/www-cisco-determed/'
+find . -name '*tex' | xargs perl -p -i -e 's/determed/www-cisco-determed/'
+1:41pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/gao:01a/Gao2001a/'
+find . -name '*tex' | xargs perl -p -i -e 's/gao:01a/Gao2001a/'
+1:43pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/goodell:2003/Goodell2003/'
+find . -name '*tex' | xargs perl -p -i -e 's/goodell:2003/Goodell2003/'
+1:44pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/griffin:02/Griffin2002b/'
+find . -name '*tex' | xargs perl -p -i -e 's/griffin:02/Griffin2002b/'
+1:45pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/jaggard2004/Jaggard2004/'
+find . -name '*tex' | xargs perl -p -i -e 's/jaggard2004/Jaggard2004/'
+1:45pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/Jaggard2004/jaggard2004/'
+find . -name '*tex' | xargs perl -p -i -e 's/Jaggard2004/jaggard2004/'
+1:46pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/labovitz:01/labovitz:ton01/'
+find . -name '*tex' | xargs perl -p -i -e 's/labovitz:01/labovitz:ton01/'
+1:47pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/labovitz:99a/labovitz99/'
+find . -name '*tex' | xargs perl -p -i -e 's/labovitz:99a/labovitz99/'
+1:47pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/mahajan04/mahajan2004/'
+find . -name '*tex' | xargs perl -p -i -e 's/mahajan04/mahajan2004/'
+1:48pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/mao:02/Mao2002/'
+find . -name '*tex' | xargs perl -p -i -e 's/mao:02/Mao2002/'
+1:49pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/mao:03/Mao2003/'
+find . -name '*tex' | xargs perl -p -i -e 's/mao:03/Mao2003/'
+1:49pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/ncp1/Horing82/'
+find . -name '*tex' | xargs perl -p -i -e 's/ncp1/Horing82/'
+1:50pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/ncp2/Lawser82/'
+find . -name '*tex' | xargs perl -p -i -e 's/ncp2/Lawser82/'
+1:51pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/netscope:00/Feldmann2000/'
+find . -name '*tex' | xargs perl -p -i -e 's/netscope:00/Feldmann2000/'
+1:53pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/omni/Teixeira2004/'
+find . -name '*tex' | xargs perl -p -i -e 's/omni/Teixeira2004/'
+1:54pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/rcc-tr/Feamster2004h/'
+find . -name '*tex' | xargs perl -p -i -e 's/rcc-tr/Feamster2004h/'
+1:54pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/rcp-tr/Caesar2004/'
+find . -name '*tex' | xargs perl -p -i -e 's/rcp-tr/Caesar2004/'
+1:55pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/routing-service/Lakshminarayanan2004/'
+find . -name '*tex' | xargs perl -p -i -e 's/routing-service/Lakshminarayanan2004/'
+1:58pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/stable:02/Rexford:stability2002/'
+find . -name '*tex' | xargs perl -p -i -e 's/stable:02/Rexford:stability2002/'
+1:59pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/tdemand:02/Feldmann2001b/'
+find . -name '*tex' | xargs perl -p -i -e 's/tdemand:02/Feldmann2001b/'
+2:01pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/teixeira:04/teixeira2004b/'
+find . -name '*tex' | xargs perl -p -i -e 's/teixeira:04/teixeira2004b/'
+2:03pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/whatif/Feamster2004/'
+find . -name '*tex' | xargs perl -p -i -e 's/whatif/Feamster2004/'
+2:04pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/wilfong:02/Griffin2002/'
+find . -name '*tex' | xargs perl -p -i -e 's/wilfong:02/Griffin2002/'
+2:04pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/shiv-ols/Ye2003/'
+find . -name '*tex' | xargs perl -p -i -e 's/shiv-ols/Ye2003/'
+2:05pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/feamster2004:whatif/Feamster2004/'
+find . -name '*tex' | xargs perl -p -i -e 's/feamster2004:whatif/Feamster2004/'
+2:06pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/bonaventure:04/bonaventure2004/'
+find . -name '*tex' | xargs perl -p -i -e 's/bonaventure:04/bonaventure2004/'
+2:07pm:[1mginseng[0;10m:thesis% 
+
+2:27pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/Clark:02/clark2002/'
+find . -name '*tex' | xargs perl -p -i -e 's/Clark:02/clark2002/'
+2:27pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/Govindan:98/Govindan1998/'
+find . -name '*tex' | xargs perl -p -i -e 's/Govindan:98/Govindan1998/'
+2:27pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/Govindan:99/Govindan1999/'
+find . -name '*tex' | xargs perl -p -i -e 's/Govindan:99/Govindan1999/'
+2:27pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/Griffin:00/Griffin2000/'
+find . -name '*tex' | xargs perl -p -i -e 's/Griffin:00/Griffin2000/'
+2:27pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/varadhan:96/Varadhan1996,Varadhan2000/'
+find . -name '*tex' | xargs perl -p -i -e 's/varadhan:96/Varadhan1996,Varadhan2000/'
+2:27pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/spring:03/spring2003/'
+find . -name '*tex' | xargs perl -p -i -e 's/spring:03/spring2003/'
+2:27pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/Varadhan:96/Varadhan1996,Varadhan2000/'
+find . -name '*tex' | xargs perl -p -i -e 's/Varadhan:96/Varadhan1996,Varadhan2000/'
+2:28pm:[1mginseng[0;10m:thesis% find . -name '*tex' | xargs perl -p -i -e 's/aol/www-aol/'
+find . -name '*tex' | xargs perl -p -i -e 's/aol/www-aol/'

@@ -1,0 +1,356 @@
+\section{Routing Model and Definitions}\label{sec:notation}
+We now define our routing model.  After introducing some basic
+terminology, we formally define two notions of good behavior for routing
+protocols: {\em stability} and {\em safety}.  Finally, we extend each of
+these two definitions to handle filtering expressiveness.
+
+\subsection{Preliminaries}
+
+We consider a model consisting of $N$ ASes (nodes)\footnote{ In this
+chapter, we use the terms ``AS'' and ``node'' interchangeably.}, labeled
+$1,\ldots,N$.  Each of these nodes wishes to establish a path (defined
+below) to a single destination, labeled $0$.
+
+\begin{defn}[Path]
+\label{def:path}
+A {\em path} from $i$ to $j$ is a sequence of nodes $P = i
+i_1 i_2 \ldots i_m j$ with no repetition; \ie, such that $i_u \neq i_v$ if
+$u \neq v$, and $i_u \neq i,j$ for all $u$.
+%Thus a path is a string of nodes where no node appears more than once.
+\end{defn}
+
+Note that we have slightly altered the definition of a {\em path} from
+Chapter~\ref{chap:rlogic} (Definition~\ref{defn:rl:path}), although the
+concept is conceptually the same: we have eliminated commas and
+subscripts for notational convenience, and we have defined that the path
+to be loop-free, as BGP typically discards paths that have loops in the
+AS-level path.  Definition~\ref{def:path} also precludes the practice of
+AS-path prepending (described in Section~\ref{sec:bg:route_selection}),
+as it does not affect the results in this chapter.
+
+We denote the number of hops in a path $P$ as $length(P)$.  In addition,
+given an AS $k$, we will write $k \in P$ if node $k$ appears in $P$.
+For clarity, given a path $P$ from $i$ to $j$, we will often denote $P$
+by $iPj$; furthermore, if $P$ is a path from $i$ to $j$, and $Q$ is a
+path from $j$ to $k$, then we will denote the concatenation of $P$ and
+$Q$ by $iPjQk$.
+
+We denote the set of {\em all} paths from $i$ to $0$ (\ie, all paths
+on the complete
+graph) using the nodes 
+$1,\ldots,N$ by $\P_i^N$.  Given the set of nodes $\{1,\ldots,N\}$, each
+AS $i$ will choose a {\em ranking} $\prec_i$ over the set of all paths
+$\P_i^N$, defined as follows.
+
+\begin{defn}[Ranking]
+A {\em ranking} $\prec_i$ for node $i$ is a total ordering
+over the set of all paths $\P_i^N$; thus, given any
+two paths $P,Q \in \P_i^N$, either $P \prec_i Q$ ($i$ prefers $Q$ to
+$P$) or $P \succ_i Q$ ($i$ prefers $P$ to $Q$).  
+\end{defn}
+
+An AS may always choose the {\em empty
+path}, $\eps$, which is equivalent to total disconnection from the
+destination node $0$.  Thus, we have $\eps \in \P_i^N$ for all $i$ and
+$N$.  Furthermore, we assume that every AS strictly prefers
+connectivity to disconnectivity, so that $P \succ_i \eps$ for all $P
+\in \P_i^N$.  
+
+All paths may not be available to node $i$, due to both
+topological constraints and filtering by other nodes.  We will use $\F_i
+\subseteq \P_i^N$ to denote the set of paths 
+actually available for use by node $i$.  The
+empty path is always available; \ie, $\eps \in \F_i$.
+
+A {\em routing system} is specified by the rankings of the individual
+nodes, together with the paths available to the individual nodes.
+Observe that we have decoupled the ``routing policy'' of
+each AS $i$ into two components: the rankings $\prec_i$ of AS $i$
+over route advertisements received; and a
+determination of which paths are filtered from other ASes.  The
+filtering decisions of all nodes, together with 
+physical constraints on the network, yield the sets $\F_1, \ldots,
+\F_N$.  
+We thus have the following formal definition of a routing system.
+
+\begin{defn}[Routing system]
+\label{def:system}
+A {\em routing system} is a tuple $(N, \prec_1, \ldots, \prec_N,
+\F_1, \ldots, \F_N)$, where node $i$ has ranking
+$\prec_i$ over the set $\P_i^N$, and $\F_i$ is the set of paths
+available to node $i$.
+\end{defn}
+
+A routing system specifies the input to any interdomain routing protocol
+we might consider.  Given this input, the protocol should converge
+to a ``routing tree'': that is, an assignment of a path to each AS, such
+that the routes taken together form a spanning tree rooted at $0$.  To
+formalize this notion, we must define path assignments and consistent
+paths.
+
+\begin{defn}[Path assignment]
+A {\em path assignment} for the routing system $(N, \prec_1, \ldots,
+\prec_N,\lb 
+\F_1, \ldots, \F_N)$ is a vector of paths $\v{P} = (P_1, \ldots, P_N)$ such
+that, for all $i$, $P_i \in \F_i$.
+\end{defn}
+
+Thus, a path assignment is an assignment of a feasible path to each node
+$i$, where feasibility is determined by the set of paths $\F_i$.
+Even though each node has a path assigned, these paths may
+not be {\em consistent}: node $i$ may be assigned a path
+$P_i = ij\hat{P}_j 0$, where $j$ is the first node traversed on $P_i$,
+and where $\hat{P}_j$ is a path from $j$ to $0$.  However, the path
+$\hat{P}_j$ may not be the same as the path $P_j$ assigned to $j$ in
+the path assignment $\v{P}$; in fact, $\hat{P}_j$ may not even be in
+the set of feasible paths $\F_j$.  
+For example, a node or link along the path $\hat{P}_j$ may experience a
+failure, causing the routing protocol to withdraw the path; if $j$ has
+heard such a withdrawal but $i$ has not, then it is possible that $P_i =
+ij\hat{P}_j 0$ until node $i$ learns that  $\hat{P}_j$ no longer exists.
+To formally capture such situations, we define consistent paths and
+consistent path assignments.  The definition of consistent path is
+a simplification of Definition~\ref{defn:pcp} from
+Chapter~\ref{chap:rlogic}, since we do not require the notion of an
+induced path in this chapter.
+
+\begin{defn}[Consistent path]
+Given a path assignment $\v{P}$, a path $\hat{P}_i$ for node $i$ is
+{\em consistent} with $\v{P}$ if one of the following holds:
+\begin{enumerate}
+\itemsep=-1pt
+\item $\hat{P}_i = \epsilon$; or
+\item $\hat{P}_i = i0$; or
+\item $\hat{P}_i = i j P_j 0$, for some $j \neq i$.
+\end{enumerate}
+\end{defn}
+
+
+\begin{defn}[Consistent path assignment]
+\label{def:consistent}
+A {\em consistent path assignment} for the routing system $(N, \prec_1,
+\ldots, \prec_N, \F_1, \ldots, \F_N)$ is a path assignment vector $\v{P}
+= (P_1,\ldots,P_N)$ such that for all $i$, $P_i$ is consistent with
+$\v{P}$.
+\end{defn}
+
+
+A routing protocol where packets are forwarded solely
+on destination should ultimately assign paths that are consistent with
+each other.  
+%We now formally define a consistent path assignment.
+
+\subsection{Stability and Safety}
+
+Informally, a path assignment is {\em stable} if it is consistent, and no
+node has a more preferred consistent path available.  
+
+%% Note that this
+%% concept makes no mention of the dynamic process by which a stable
+%% point is reached; it only suggests that once a stable path
+%% assignment is reached, no further route changes should be made by the
+%% nodes.  (We will formalize this point in the next section.) 
+
+
+\begin{defn}[Stable path assignment]
+Given a routing system $(N, \prec_1, \ldots, \prec_N,\lb \F_1,
+\ldots, \F_N)$, and a consistent path assignment $\v{P}$, we say
+that $\v{P}$ is {\em stable} if for all nodes $i$, and all paths
+$\hat{P}_i \in \F_i$
+that are consistent with $\v{P}$, $\hat{P}_i \prec_i P_i$.
+\end{defn} 
+
+\begin{defn}[Stable routing system]
+The routing system $(N, \prec_1, \ldots, \prec_N, \F_1,
+\ldots, \F_N)$ is {\em stable} if there exists at least one stable
+path assignment $\v{P}$.
+\end{defn} 
+
+%\subsection{Safety}
+
+The stability of a
+routing system does not indicate whether a routing protocol will
+converge {\em regardless} of the initial path assignment.  The {\em
+  safety} property, which states that a
+protocol eventually converges, regardless of the initial path
+assignment and ordering of the routing messages, captures this notion.
+
+In defining safety, we will consider a simplified abstraction of 
+BGP.  We model the process by which
+nodes receive route advertisements from other nodes and subsequently update
+their own route decisions.  We will consider a protocol
+dynamic where at each time step only a single AS is {\em activated};
+when activated, an AS immediately processes all pending incoming route
+advertisements, and then makes a route decision.  Formally, this model will
+translate into a path assignment sequence where exactly one node (the
+``activated'' node) changes its route at any given time step.
+
+A routing system is safe if no oscillation occurs
+regardless of the order in which nodes are activated.  
+%We start,
+%therefore, by defining a fair activation sequence.
+
+\begin{defn}[Fair activation sequence]
+The sequence $i_1, i_2, \ldots$ is a {\em fair activation
+sequence} if each node $i = 1,\ldots,N$ appears infinitely often in
+the sequence.
+\end{defn}
+
+This definition of fair activation sequence is similar to that presented
+by Gao and Rexford~\cite{Gao2001a}, except that in our
+definition we only 
+activate one node at a time.  This distinction is minor: we can
+interpret the Gao and Rexford dynamics as a model where 
+outstanding routing messages may be in flight when a particular node is
+activated.
+
+We now define our simplified model of the routing protocol dynamics: that
+is, starting from an initial path assignment $\v{P}_0$, and given a
+fair activation sequence of nodes $i_1, i_2,\ldots$, what is the
+resulting observed sequence of path assignments $\v{P}_1, \v{P}_2,
+\ldots$?  To formalize the dynamics of our model, we consider an
+abstraction of the 
+BGP decision process described in Figure \ref{fig:bgpdec}.  At each
+time $t$, a node $i_t$ is activated, and chooses its most preferred available
+path consistent with the path assignment $\v{P}_{t-1}$.  All other
+nodes' paths remain unchanged.  It is clear that this decision process
+yields a sequence of path assignments $\v{P}_1, \v{P}_2,
+\ldots$.
+
+\begin{figure}
+\framebox{
+\parbox{\linewidth}{
+\textit{Routing protocol dynamics}
+
+At time $t-1$, the current path assignment is
+$\v{P}_{t-1}$; \ie, each node $i$ has currently selected path
+$P_{i,t-1}$ to the destination $0$.  At time $t$:
+\begin{enumerate}
+\item A given node $i_t$ is activated.
+\item Node $i_t$ updates its path to be the {\em most preferred path}
+(according to $\prec_{i_t}$) consistent with $\v{P}_{t-1}$.  That
+is,
+\begin{enumerate}
+\item $P_{i_t,t} \in \F_{i_t}\ \textrm{is consistent with}\
+  \v{P}_{t-1}$, and
+\item $P_{i_t,t} \succ_{i_t}
+\hat{P}_{i_t}\ \forall\ \hat{P}_{i_t} \in \F_{i_t}\ \textrm{consistent
+with}\ \v{P}_{t-1}$.
+\end{enumerate}
+\item All other nodes leave their paths unchanged.
+% \ie, for $i \neq i_t$,
+%\[ P_{i,t} = P_{i,t-1}. \]
+\end{enumerate}
+}
+}
+\caption[Model of the routing protocol dynamics]{The routing protocol
+  dynamics, given an activation sequence $i_1, 
+i_2, \ldots$.  The process starts from an initial path assignment $\v{P}_0$.}
+\label{fig:bgpdec}
+\end{figure}
+
+
+After any given activation step $t$, the overall path
+assignment $\v{P}_t$ may not be consistent.  Inconsistencies reflect the
+fact that a node only updates its path assignment in response to the
+receipt of a route advertisement.  If, at time $t_0$, a node $i$ is
+using a path that traverses some other node $j$ that has since changed
+paths, then node $i$ would obliviously continue to use (and advertise)
+that {\em inconsistent} path until it receives a routing update that
+reflects that the path through $j$ has disappeared or changed.  
+%% When $i$
+%% receives the routing update at some later time $t_1$, it selects a new
+%% path to the destination from the remaining paths that it knows about at
+%% time $t_1$.  Our model uses an activation sequence to reflect $i$'s
+%% receipt of routing updates consistent with path assignment $\v{P}_t$ and
+%% updating its path to the destination: 
+When activated, say, at time $t > t_0$, node $i$ would discover that the
+path it was using was 
+inconsistent with $\v{P}_t$ and would then select its
+highest-ranked path that was consistent with $\v{P}_t$.  The activation
+of a node at some time $t$ corresponds to that node receiving all
+available routing information in the system up to that time.
+
+With the definition of our protocol dynamics in hand, we can define
+protocol {\em safety}.  Given a routing system and an activation
+sequence, we say that the system has converged if, after some finite
+time, the path assignment remains invariant for all future time.  A
+protocol is {\em safe} if it converges to a stable path assignment,
+regardless of the initial path assignment and fair activation sequence.
+
+\begin{defn}[Safety]
+\label{def:safety}
+A routing system $(N, \prec_1, \ldots, \prec_N, \F_1,
+\ldots, \F_N)$ is {\em safe} if for any initial path
+assignment $\v{P}_0$ and fair activation sequence $i_1, i_2, \ldots$,
+there exists a finite $T$ such that $\v{P}_t = \v{P}_T$ for all $t \geq
+T$.  
+\end{defn} 
+ 
+Because the activation sequences are fair in the preceding
+definition, if a routing system converges to $\v{P}_t$, then the
+resulting path assignment to which the system converges must be both
+consistent and stable.  If not, at least one node would change its path
+assignment eventually.  
+%Conversely, if the initial path assignment is
+%stable, then it is clear that the system will be convergent regardless
+%of the activation sequence, since no node will ever alter its choice of
+%path.
+
+%Our main interest is in studying routing systems that are always
+%convergent, regardless of the activation sequence and initial path
+%assignment chosen.  Such systems are called {\em safe}~\cite{Griffin2002c}.
+%
+%\begin{defn}[Safety]
+%\label{def:safety}
+%The routing system $(N, \prec_1, \ldots, \prec_N, \F_1,
+%\ldots, \F_N)$ is {\em safe} if for any fair activation sequence $i_1,
+%i_2, \ldots$ and initial path assignment $\v{P}_0$, the routing system is
+%convergent.
+%\end{defn}
+%
+%% Safety is a much more practically interesting condition than stability
+%% of a system, since a safe system can be expected to converge even as
+%% nodes dynamically update routes.  Since a safe system must have at
+%% least one stable path assignment, any safe routing system is also a
+%% stable routing system.
+
+\subsection{Filtering}
+
+We are interested in the stability and safety of systems
+that result when nodes are allowed to filter routes from other nodes.
+We thus require conditions stronger than stability and safety, known as
+{\em stability under filtering} and {\em safety under filtering}.
+Informally, a routing system is stable (respectively, safe) under
+filtering if, under any choices of filters made by the ASes, the
+resulting routing system is always stable (respectively, safe).  
+%We
+%formalize these notions as follows.
+
+\begin{defn}[Stable under filtering]
+The routing system $(N, \prec_1, \ldots, \prec_N, \F_1, \ldots, \F_N)$
+is {\em stable under filtering} if, for all choices of available paths
+$\hat{\F}_i \subseteq \F_i$ for $i = 1,\ldots,N$, the routing system
+$(N, \prec_1, \ldots, \prec_N, \hat{\F}_1, \ldots, \hat{\F}_N)$ is
+stable.
+\end{defn} 
+
+\begin{defn}[Safe under filtering]
+The routing system $(N, \prec_1, \ldots, \prec_N, \F_1, \ldots, \F_N)$
+is {\em safe under filtering} if, for all choices of available paths
+$\hat{\F}_i \subseteq \F_i$ for $i = 1,\ldots,N$, the routing system
+$(N, \prec_1, \ldots, \prec_N, \hat{\F}_1, \ldots, \hat{\F}_N)$ is
+safe.
+\end{defn} 
+
+We interpret these definitions as follows.  The set of available paths
+$\F_i$ gives the set of paths that are physically possible for node $i$ to
+use, given the current network topology.  Once all nodes have chosen
+their route filters, 
+$\hat{\F}_i$ gives the set of paths that can ever be used by node $i$ in
+route advertisements.  Because we allow arbitrary choice of filters, the
+resulting routing system should be stable and safe regardless of the
+choices of $\hat{\F}_1, \ldots, \hat{\F}_N$ that are made.
+
+
+

@@ -1,0 +1,35 @@
+\cs{T}o this point, we have focused on how static configuration analysis
+can be applied to proactively achieve correctness and predictability in
+Internet routing {\em within a single AS}, for which all router
+configurations are available.  However, in some cases, a network
+operator may wish to detect whether some {\em neighboring} AS has a
+faulty configuration or is otherwise sending ``incorrect'' routing
+information.  In Section~\ref{sec:dynamic}, we explore how dynamic
+analysis can often be useful in helping operators diagnose whether a
+neighboring AS is violating the route validity problem discussed in
+Section~\ref{sec:validity} by not advertising equally good routes at all
+interconnection points, which is a violation of common settlement-free
+peering contracts~\cite{www-aol}.  An important theme to note in this
+work is the complementary role played by static configuration analysis:
+determining whether the contract violations are caused by a neighboring
+AS or the configuration in the local AS also requires analyzing the
+local configurations with \rccns.  
+
+Static configuration analysis is useful for detecting faults in existing
+configurations, but a longer-term goal should be to make routing
+configuration more intrinsically correct and predictable in the first
+place.  That is, a network operator should be actively discouraged (and
+perhaps even prevented) from specifying configurations that induce
+incorrect behavior.  Chapter~\ref{chap:policy} addressed this problem to
+some degree by exploring how rankings might be restricted to explicitly
+guarantee safety.  In Section~\ref{sec:rcp}, we explore how a different
+{\em architecture} for Internet routing could make routing failures less
+likely.  Specifically, we advocate moving responsibility for selecting
+Internet routes to a separate system called the Routing Control Platform
+(RCP), which actively monitors intra-AS topology and available routes
+and computes the route that each router should select for each
+destination.  RCP presents many systems-level challenges (\eg, can such
+a system compute routes for a large AS fast enough without being
+overloaded?); other recent work has built a prototype to address some of
+these concerns~\cite{caesar2004}.  In this dissertation, we focus on how
+RCP could help improve correctness and predictability.

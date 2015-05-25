@@ -1,0 +1,28 @@
+\centering
+%  \begin{tiny}
+    \begin{pspicture}(8,2.75)
+%    \showgrid
+    \cnodeput(3,0.75){A}{$X$}
+    \cnodeput(5,0.75){B}{$Y$}
+    \cnodeput(2,2.5){C}{{\em AS 2}}
+    \cnodeput(6,2.5){D}{{\em AS 3}}
+    \rput(4,3){\rnode{O}{\psframebox[linestyle=dotted]{$d$}}}
+
+    \rput(2.9,1.2){\rnode{1}{{\tiny 2}}}
+    \rput(3.5,1.2){\rnode{2}{{\tiny 1}}}
+
+    \rput(7,0.75){\parbox{1in}{{\tiny $\mathrm{lpref}_Y(a) > 
+\mathrm{lpref}_Y(c)$ \\  $\mathrm{lpref}_Y(c) >\mathrm{lpref}_Y(b)$}}}
+
+    \psset{nodesep=2pt, arrows=->}
+    \ncline[linestyle=dotted]{O}{C}
+    \ncline[linestyle=dotted]{O}{D}
+    \ncline{C}{A}\tlput{$a$}
+    \ncline{D}{A}\rput(4,2){\rnode{x}{$b$: MED=2}}
+    \ncline{D}{B}\trput{$c$: MED=1}
+    \ncline[nodesep=0pt,arrows=-,linestyle=dashed]{A}{B}
+    \ncput*{{\tiny iBGP}}
+    \rput(4.05,0.25){\rnode{as_1}{{\em AS 1}}}
+    \ncbox[linestyle=dashed,linearc=0.2,nodesep=0.25cm,boxsize=0.7]{A}{B}
+    \ncline{as_1}{E}
+\end{pspicture}

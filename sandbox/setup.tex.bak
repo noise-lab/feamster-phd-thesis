@@ -1,0 +1,203 @@
+%%%
+%%% setup.tex
+%%%
+
+\begin{figure*}
+\centering\epsfig{file=figures/bigpic4.eps,width=0.8\textwidth}
+\caption{Decomposing {\em network-wide} BGP route selection into three independent stages}
+\label{fig:modules}
+\end{figure*}
+
+\section{Modeling Constraints and Overview}
+\label{sec:setup}
+%%%
+%%% Introduction
+%%%
+Network operators frequently adjust the configuration of BGP policies
+to control the flow of traffic through an AS.  In this section, we
+define three constraints that a routing system must obey for a model
+to provide accurate predictions.  Next we describe how these
+constraints enable us to decompose the modeling problem into three
+stages---applying the import policy to eBGP-learned routes, selecting
+the best BGP path at each router, and computing the forwarding path.
+Since the first and third stages are relatively simple, the rest of
+the paper focuses on the second stage of computing the BGP routing
+decision at each router for each destination prefix.
+
+
+
+\subsection{Constraints on Modeling Path Selection}
+%%%
+%%% Feasibility of such a model
+%%%
+Modeling the effects of a configuration or topology change is possible
+when three important conditions hold.  First, the {\em inputs\/} to the
+model must be relatively stable.  In particular,
+
+\begin{constraint}
+\label{a:ebgp}
+The eBGP-learned routes change slowly with respect to the timescale of
+network engineering decisions.
+\end{constraint}
+
+\vspace*{0.1in}
+\noindent
+If the eBGP-learned routes change frequently, the internal routing
+system does not have time to propagate the effects of one eBGP
+advertisement before the next one arrives.  In practice, most BGP
+routes are stable for days or weeks at a time~\cite{labovitz:99a}, and
+the vast majority of traffic is associated with these stable
+routes~\cite{stable:02}.  This allows the routing model to operate on
+a static snapshot of the eBGP routes.  Any eBGP routing change can be
+treated as a separate problem instance.
+
+Second, the routers in the network must ultimately reach a stable
+outcome.  In particular,
+
+\begin{constraint}
+\label{a:ibgp}
+Given stable eBGP-learned routes and fixed iBGP and IGP topologies,
+each router inside the AS converges to a unique routing decision.
+\end{constraint}
+
+\vspace*{0.1in}
+\noindent
+If the routers continually change their routing decisions, no model
+could accurately predict how the data traffic would flow.
+Fortunately, previous work~\cite{wilfong:02} has identified sufficient
+conditions for an internal routing configuration to satisfy
+constraint~\ref{a:ibgp}.  We describe these conditions in more detail
+in Section~\ref{sec:best_egress} when we address the challenges
+introduced by route reflectors.
+
+Third, the routing decisions at each router should not depend on
+time or message ordering:
+
+\begin{constraint}
+\label{a:determ}
+The routing decision at each router must depend only on the routes
+received from its neighbors, and not the order or timing of the
+messages.
+\end{constraint}
+
+\vspace*{0.1in}
+\noindent
+For example, some router vendors have an additional step in the BGP
+decision process that favors the ``oldest'' route before the final
+tie-breaking step of comparing the router IDs.  The ``age-based
+tie-breaking'' favors more stable routes, making the outcome of the
+BGP decision process dependent on the {\em order\/} the router
+receives the advertisements.  Disabling age-based tie-breaking forces
+a deterministic selection based on the smallest router ID, as in
+Figure~\ref{tab:decision}; other BGP features, such as route flap
+damping~\cite{rfc2439}, can help reduce the likelihood of selecting
+unstable routes.
+
+
+\subsection{Decomposition of the Modeling Problem}\label{sec:decompose}
+%%%
+%%% Can model any message ordering
+%%%
+The routing decision at each router depends on the eBGP-learned
+routes, the BGP routing policies, the iBGP session configuration, and
+the IGP topology.  When constraints~\ref{a:ebgp}, \ref{a:ibgp},
+and~\ref{a:determ} hold, a model can compute the effects of changes 
+to these inputs:
+
+\begin{observation}
+\label{t:order}
+If a routing system is guaranteed to converge to a unique solution,
+the solution is independent of the order that routers exchange routes
+and apply the decision process.
+\end{observation}
+
+\vspace*{0.1in}
+\noindent
+%This observation means that a simulator that accurately models the
+%path selection process at each router would eventually arrive at the
+%same answer as the actual routing system.  
+This observation means that we can consider the evolution of the
+routing system under {\em any particular ordering\/} of the steps in
+the convergence process, without the risk of arriving at the wrong
+answer.  Following the approach in~\cite{Griffin2002c}, we express an
+ordering in terms of an {\em activation sequence\/} that ``activates''
+one or more routers in each phase.  When activated, a router applies
+the decision process in Table~\ref{tab:decision} and propagates the
+best route to its iBGP neighbors.  We construct an activation sequence
+that allows us to decompose the problem into three stages as shown in
+Figure~\ref{fig:modules}:
+
+\textbf{1. Receiving the eBGP routes and applying import policy:}
+The first stage activates all of the edge routers at the same time.
+This stage assumes that each router receives all of its eBGP-learned
+routes and applies the import policies, {\em before exchanging any
+iBGP update messages\/}.  Each eBGP-learned route has attributes (such
+as the destination prefix and the AS path) and is associated with an
+eBGP session.  The import policy may filter the route or set certain
+attributes such as local preference, origin type, and multiple-exit
+discriminator (MED), according to attributes in the advertised route
+(e.g., based on ASes in the AS path).  Because applying the import
+policy is a local operation for each eBGP-learned route at each
+router, the first stage emulates exactly the operations a real router
+would perform upon receiving each of the eBGP routes.  These routes,
+with modified attributes, form the input to the second stage.
+
+\textbf{2. Computing the best BGP route at each router:}
+Many routes from the first stage would never be selected by any router
+as the best route.  For example, an eBGP-learned route with a local
+preference of 90 would {\em never\/} be selected over another route
+with a local preference of 100.  In addition, different routers in the
+AS may select different best BGP routes because they have different
+IGP path costs to the egress router.  Also, a router can only consider
+the routes advertised by its iBGP and eBGP neighbors, which may
+influence the final decision at that router.  
+%Deriving accurate and
+%efficient algorithms for computing the best BGP route at each router
+%is the main contribution of this paper.  
+The output of this stage is a
+single best egress router for each ingress router and destination
+prefix.  Constructing an efficient activation sequence for this stage is
+challenging, and is the focus of the next three sections of the paper.
+
+\textbf{3. Computing the forwarding path through the AS:}
+In the third stage, we model the effects of the IGP link weights on
+the construction of the forwarding path through the AS from an ingress
+router toward a destination prefix.  Given the chosen BGP route, the
+ingress router forwards packets along the outgoing link (or links)
+along shortest paths to the egress router, and the process repeats at
+the next router.  Ideally, the traffic flows along the shortest path
+(or paths) all the way from the ingress router to the chosen egress
+router.  However, in practice, routers along the shortest path may
+have chosen a {\em different\/} egress router.  Such {\em
+deflections\/} can occur if the iBGP session configuration limits the
+BGP routing options at the routers~\cite{wilfong:02}.  By considering
+one router at a time, the third stage can compute an accurate view of
+the forwarding path(s) even when deflections occur.
+
+\vspace*{0.1in}
+\noindent
+Although the diagram in Figure~\ref{fig:modules} shows only three
+stages, we envision that network operators could incorporate other
+phases for additional functionality.  For example, another phase could
+combine the predicted forwarding paths with traffic data to predict
+the load on each link in the network.  Using the model for traffic
+engineering assumes that traffic volumes are relatively stable, and
+that they remain stable in response to configuration changes.  In
+previous work, we found that prefixes responsible for large amounts of
+traffic have relatively stable traffic volumes over long
+timescales~\cite{Feamster2003e}.  Operators could use the routing model to
+test configuration changes on reasonably slow timescales that affect
+prefixes with stable traffic volumes.  A network operator could also
+combine measurements or estimates of the traffic arriving at each
+ingress router for each destination prefix~\cite{tdemand:02} with the
+link-level paths to predict the load on each link in the network.
+Another phase might evaluate the optimality of the these link-level
+paths in terms of propagation delay or link utilization and could
+search for good configuration changes before applying them on a live
+network.
+
+
+
+
+
+

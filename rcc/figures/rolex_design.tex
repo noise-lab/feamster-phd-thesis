@@ -1,0 +1,19 @@
+\begin{pspicture}(8,1.25)
+%\showgrid
+\rput(1,1.25){\rnode{config}{\parbox{1.3in}{\centering{\mft Router
+	Configurations\\ (offline, collected from routers)}}}}
+\rput(7,1.25){\rnode{prop}{{\mft Property}}}
+\rput(0.25,0.25){\rnode{rs}{\psframebox{\parbox{0.5in}{\centering{\mft Preprocessor}}}}}
+\rput(3.3,0.25){\rnode{sim}{\psframebox{\parbox{0.5in}{\centering{\mft Parser}}}}}
+\rput(6.65,0.25){\rnode{la}{\psframebox{\parbox{0.5in}{\centering{\mft
+	  Verifier}}}}}
+\rput(8,0.25){\rnode{end}{}}
+\ncline[arrows=->]{rs}{sim}
+\ncline[arrows=->]{sim}{la}
+\ncline[arrows=->]{la}{end}
+\ncarc[arrows=->,nodesep=2pt]{prop}{la}
+\ncarc[arrows=->]{config}{rs}
+\rput(2.15,0.55){\parbox{0.85in}{{\dft Processed Input}}}
+\rput(5,0.55){\parbox{0.55in}{\centering{\dft Intermediate Format}}}
+\rput(7.95,0.55){{\dft Error?}}
+\end{pspicture}

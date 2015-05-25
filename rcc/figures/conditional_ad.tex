@@ -1,0 +1,32 @@
+\centering
+\begin{pspicture}(8,1)
+%    \showgrid
+    \psset{nodesep=2pt, arrows=<->}
+
+    \cnodeput(2.75,0.5){X}{$X$}
+    \cnodeput(4.75,0.5){Y}{$Y$}
+    \rput(3.75,0.7){\rnode{ibgp}{{\small iBGP}}}
+
+    \psset{nodesep=2pt, arrows=<->}
+    \ncline{X}{Y}
+
+    \rput(1.25,1.2){\rnode{r1}{}}
+    \rput(6.25,1.2){\rnode{r2}{}}
+
+    \psset{nodesep=0pt, linestyle=dotted, arrows=->}
+
+    \ncline{X}{r1}
+    \ncline{Y}{r2}
+
+    \rput(0.25,0.5){\rnode{r1_}{\parbox{0.5in}{{\footnotesize
+    192.168.0.0/24 if $Y$ fails: 192.168.0.0/25,
+    192.168.1.0/25 }}}} 
+
+    \rput(7,0.75){\rnode{r2_}{\parbox{0.5in}{{\footnotesize
+    192.168.0.0/24}}}}
+
+
+    \psframe[fillcolor=white,linestyle=dashed, framearc=0.3](1.75,0)(5.75, 1)
+
+
+\end{pspicture}

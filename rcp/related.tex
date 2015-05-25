@@ -1,0 +1,20 @@
+
+
+XXX remove
+Scaling problems exist not only within a single AS, but also between
+groups of ASes.  The route arbiter project proposed placing route
+servers at exchange points~\cite{Govindan1998} to obviate the need for a
+full mesh eBGP topology (\ie, at the exchange point) by applying policy
+once at the route server.  This architecture facilitates centralized
+application of BGP routing policies at a single exchange point.  In
+Section~\ref{sec:rcp}, we present RCP, which primarily addresses how to
+scalably disseminate routes {\em within} a single AS.  In some ways, RCP
+can be viewed as an analog to route servers~\cite{Govindan1998} for
+intra-AS route dissemination: whereas route servers were used to reduce
+the number of eBGP sessions from $O(n^2)$ to $O(n)$, where $n$ is the
+number of ASes at an exchange point, RCP reduces the number of iBGP
+sessions from $O(n^2)$ to $O(n)$, where $n$ is the number of routers in
+a single AS.  Because RCP separates the logic of route selection from
+the physical routers, it is conceivable that it could also used as a
+platform for developing new mechanisms for exchanging routes between
+pairs or groups of routers. 
